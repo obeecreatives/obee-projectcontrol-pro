@@ -1,4 +1,4 @@
-import { ContentItem, RateCardItem, GeneralLink, ActivityLog, StatusType, UserRole, CrmClientItem } from '../types';
+import { ContentItem, RateCardItem, GeneralLink, ActivityLog, StatusType, UserRole, CrmClientItem, CardComment } from '../types';
 import { INITIAL_CONTENT_ITEMS, INITIAL_RATE_CARDS, INITIAL_LINKS, FULL_ACCESS_EMAILS, INITIAL_CRM_DATA, KATEGORI_INTERNAL_OPTIONS } from '../data/seedData';
 import { geoService } from './geoService';
 
@@ -251,6 +251,59 @@ class StorageService {
     });
 
     return { success: true };
+  }
+
+  addComment(
+    itemId: string,
+    commentData: Omit<CardComment, 'id' | 'createdAt'>
+  ): { success: boolean; comment?: CardComment; error?: string } {
+    const list = this.getContent();
+    const item = list.find((it) => it.ID === itemId);
+    if (!item) return { success: false, error: 'Konten tidak ditemukan' };
+
+    const newComment: CardComment = {
+      ...commentData,
+      id: 'cmt-' + Math.random().toString(36).substring(2, 9),
+      createdAt: new Date().toISOString(),
+    };
+
+    if (!item.comments) {
+      item.comments = [];
+    }
+    item.comments.push(newComment);
+    item.UpdatedAt = new Date().toISOString();
+
+    this.saveContent(list);
+
+    // Activity Log
+    this.addActivityLog({
+      ID: 'act-' + Math.random().toString(36).substring(2, 9),
+      Timestamp: new Date().toISOString(),
+      ActorName: commentData.authorName,
+      Action: 'Komentar Ditambahkan',
+      ContentID: itemId,
+      ContentTema: item.Tema || item.IdeKonten,
+      Klien: item.Klien,
+      StatusBaru: commentData.category ? `[${commentData.category}]` : undefined,
+      locationSnapshot: geoService.createLocationSnapshot(),
+    });
+
+    return { success: true, comment: newComment };
+  }
+
+  deleteComment(itemId: string, commentId: string): boolean {
+    const list = this.getContent();
+    const item = list.find((it) => it.ID === itemId);
+    if (!item || !item.comments) return false;
+
+    const prevLen = item.comments.length;
+    item.comments = item.comments.filter((c) => c.id !== commentId);
+    if (item.comments.length !== prevLen) {
+      item.UpdatedAt = new Date().toISOString();
+      this.saveContent(list);
+      return true;
+    }
+    return false;
   }
 
   getRateCards(): RateCardItem[] {

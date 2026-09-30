@@ -10,6 +10,7 @@ import {
   Trash2,
   Clapperboard,
   Image as ImageIcon,
+  MessageSquare,
 } from 'lucide-react';
 
 interface ContentCardProps {
@@ -209,27 +210,44 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         </div>
       )}
 
-      {/* Checklist Asset & Caption */}
-      <div className={`flex items-center gap-3 text-xs pt-1 border-t ${isDarkMode ? 'text-slate-300 border-slate-700/60' : 'text-slate-700 border-slate-200'}`}>
-        <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 select-none">
-          <input
-            type="checkbox"
-            checked={!!item.ChecklistAsset}
-            onChange={(e) => onToggleChecklist(item.ID, 'ChecklistAsset', e.target.checked)}
-            className="w-3.5 h-3.5 rounded border-slate-400 text-red-600 focus:ring-0 cursor-pointer"
-          />
-          <span className="text-[11px]">Asset</span>
-        </label>
+      {/* Checklist Asset & Caption + Comment Badge */}
+      <div className={`flex items-center justify-between text-xs pt-1 border-t ${isDarkMode ? 'text-slate-300 border-slate-700/60' : 'text-slate-700 border-slate-200'}`}>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 select-none">
+            <input
+              type="checkbox"
+              checked={!!item.ChecklistAsset}
+              onChange={(e) => onToggleChecklist(item.ID, 'ChecklistAsset', e.target.checked)}
+              className="w-3.5 h-3.5 rounded border-slate-400 text-red-600 focus:ring-0 cursor-pointer"
+            />
+            <span className="text-[11px]">Asset</span>
+          </label>
 
-        <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 select-none">
-          <input
-            type="checkbox"
-            checked={!!item.ChecklistCaption}
-            onChange={(e) => onToggleChecklist(item.ID, 'ChecklistCaption', e.target.checked)}
-            className="w-3.5 h-3.5 rounded border-slate-400 text-red-600 focus:ring-0 cursor-pointer"
-          />
-          <span className="text-[11px]">Caption</span>
-        </label>
+          <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 select-none">
+            <input
+              type="checkbox"
+              checked={!!item.ChecklistCaption}
+              onChange={(e) => onToggleChecklist(item.ID, 'ChecklistCaption', e.target.checked)}
+              className="w-3.5 h-3.5 rounded border-slate-400 text-red-600 focus:ring-0 cursor-pointer"
+            />
+            <span className="text-[11px]">Caption</span>
+          </label>
+        </div>
+
+        {/* Micro badge: ONLY shown if comments > 0 to keep UI 100% clean */}
+        {Boolean(item.comments && item.comments.length > 0) && (
+          <div
+            className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md border ${
+              isDarkMode
+                ? 'bg-red-500/10 text-red-400 border-red-500/30'
+                : 'bg-red-50 text-red-600 border-red-200'
+            }`}
+            title={`${item.comments!.length} Catatan Diskusi / Revisi`}
+          >
+            <MessageSquare className="w-3 h-3 text-red-500" />
+            <span className="tabular-nums">{item.comments!.length}</span>
+          </div>
+        )}
       </div>
 
       {/* Status Controller (Role Aware) */}

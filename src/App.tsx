@@ -650,6 +650,11 @@ export default function App() {
         activeRole={activeRole}
         defaultCreator={identityName}
         isDarkMode={isDarkMode}
+        currentUser={currentUser}
+        onCommentsUpdated={() => {
+          setItems(storageService.getContent());
+          setActivityLogs(storageService.getActivityLogs());
+        }}
       />
 
       {/* Role Selector Modal */}

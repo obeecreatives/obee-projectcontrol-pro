@@ -47,6 +47,19 @@ export interface LocationSnapshot {
   distanceKm?: number;
 }
 
+export type CommentCategory = 'General' | 'Revisi Klien' | 'Catatan Internal' | 'Feedback Aset' | 'Urgent';
+
+export interface CardComment {
+  id: string;
+  authorName: string;
+  authorEmail?: string;
+  authorRole: UserRole;
+  text: string;
+  category?: CommentCategory;
+  mentions?: string[];
+  createdAt: string;
+}
+
 export interface ContentItem {
   ID: string;
   Klien: string;
@@ -73,6 +86,7 @@ export interface ContentItem {
   ChecklistCaption?: boolean;
   TipeProject: TipeProjectType;
   TanggalApprove?: string;
+  comments?: CardComment[];
 }
 
 export interface RateCardItem {
