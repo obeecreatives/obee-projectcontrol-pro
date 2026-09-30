@@ -270,13 +270,23 @@ export default function App() {
     addToast('Anda telah keluar dari sesi', 'info');
   };
 
+  const [contentModalInitialTab, setContentModalInitialTab] = useState<'detail' | 'comments'>('detail');
+
   const handleOpenEditModal = (item: ContentItem) => {
     setEditingContentItem(item);
+    setContentModalInitialTab('detail');
+    setIsContentModalOpen(true);
+  };
+
+  const handleOpenChatModal = (item: ContentItem) => {
+    setEditingContentItem(item);
+    setContentModalInitialTab('comments');
     setIsContentModalOpen(true);
   };
 
   const handleOpenNewContentModal = () => {
     setEditingContentItem(null);
+    setContentModalInitialTab('detail');
     setIsContentModalOpen(true);
   };
 
@@ -373,11 +383,13 @@ export default function App() {
               items={items}
               activeRole={activeRole}
               onEditItem={handleOpenEditModal}
+              onOpenChat={handleOpenChatModal}
               onDeleteItem={handleDeleteContent}
               onStatusChange={handleStatusChange}
               onToggleChecklist={handleToggleChecklist}
               onOpenNewContentModal={handleOpenNewContentModal}
               isDarkMode={isDarkMode}
+              currentUser={currentUser}
             />
           )}
 
@@ -651,9 +663,16 @@ export default function App() {
         defaultCreator={identityName}
         isDarkMode={isDarkMode}
         currentUser={currentUser}
-        onCommentsUpdated={() => {
+        initialTab={contentModalInitialTab}
+        onCommentsUpdated={(itemId, updatedComments) => {
           setItems(storageService.getContent());
           setActivityLogs(storageService.getActivityLogs());
+          setEditingContentItem((prev) => {
+            if (prev && prev.ID === itemId) {
+              return { ...prev, comments: updatedComments };
+            }
+            return prev;
+          });
         }}
       />
 

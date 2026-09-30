@@ -1,5 +1,5 @@
-import React from 'react';
-import { ContentItem, UserRole, StatusType } from '../types';
+import React, { useMemo } from 'react';
+import { ContentItem, UserRole, StatusType, StaffUser } from '../types';
 import { ROLES } from '../data/seedData';
 import {
   ExternalLink,
@@ -11,16 +11,19 @@ import {
   Clapperboard,
   Image as ImageIcon,
   MessageSquare,
+  AtSign,
 } from 'lucide-react';
 
 interface ContentCardProps {
   item: ContentItem;
   activeRole: UserRole;
   onEdit: (item: ContentItem) => void;
+  onOpenChat?: (item: ContentItem) => void;
   onDelete: (id: string) => void;
   onStatusChange: (id: string, newStatus: StatusType) => void;
   onToggleChecklist: (id: string, field: 'ChecklistAsset' | 'ChecklistCaption', value: boolean) => void;
   isDarkMode?: boolean;
+  currentUser?: StaffUser | null;
 }
 
 const ALL_STATUS_OPTIONS: StatusType[] = [
@@ -36,10 +39,12 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   item,
   activeRole,
   onEdit,
+  onOpenChat,
   onDelete,
   onStatusChange,
   onToggleChecklist,
   isDarkMode = true,
+  currentUser,
 }) => {
   const roleConfig = ROLES[activeRole] || ROLES.project_manager;
   const isInternal = item.TipeProject === 'Internal';
@@ -54,28 +59,48 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     activeRole === 'web_developer' ||
     activeRole === 'site_engineer';
 
+  const commentsCount = item.comments ? item.comments.length : 0;
+
+  // Check if current user is @mentioned in any comment of this card
+  const isMentionedForMe = useMemo(() => {
+    if (!currentUser || !item.comments || item.comments.length === 0) return false;
+    const myName = currentUser.name.toLowerCase();
+    const myFirstName = currentUser.name.split(' ')[0].toLowerCase();
+    return item.comments.some((c) => {
+      if (
+        c.mentions &&
+        c.mentions.some(
+          (m) =>
+            m.toLowerCase().includes(myFirstName) ||
+            myName.includes(m.toLowerCase())
+        )
+      ) {
+        return true;
+      }
+      const lowerText = c.text.toLowerCase();
+      return (
+        lowerText.includes(`@${myFirstName}`) ||
+        lowerText.includes(`@${myName}`) ||
+        lowerText.includes(`@[${myName}]`)
+      );
+    });
+  }, [currentUser, item.comments]);
+
   // Calculate available statuses for this card & user role:
-  // a. Staff/creator/freelancer:
-  //    - draft phase (New Idea, On Progress, Request Approval)
-  //    - CANNOT move to Approved / RtP
-  //    - If ALREADY in Approved / RtP, given rights back to move to Scheduling / Published!
   const getAvailableStatuses = (): StatusType[] => {
     if (isClient) return [];
     if (isFullOrAdmin) return ALL_STATUS_OPTIONS;
 
     // Staff / Creator / Freelancer
     if (item.Status === 'New Idea' || item.Status === 'On Progress' || item.Status === 'Request Approval') {
-      // In early draft: can move between New Idea, On Progress, Request Approval
       return ['New Idea', 'On Progress', 'Request Approval'];
     }
 
     if (item.Status === 'Approved / RtP') {
-      // Once Approved / RtP, staff can advance to Scheduling or Published!
       return ['Approved / RtP', 'Scheduling', 'Published'];
     }
 
     if (item.Status === 'Scheduling' || item.Status === 'Published') {
-      // Once in Scheduling or Published, staff can move between Scheduling and Published
       return ['Scheduling', 'Published'];
     }
 
@@ -85,8 +110,36 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   const availableStatusOptions = getAvailableStatuses();
   const isCurrentStatusLockedForUser = isClient;
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('button') ||
+      target.closest('input') ||
+      target.closest('select') ||
+      target.closest('a')
+    ) {
+      return;
+    }
+    onEdit(item);
+  };
+
   return (
-    <div className={`${isDarkMode ? 'bg-[#1e293b]/90 hover:bg-[#1e293b] border-slate-700/80 shadow-black/40' : 'bg-white hover:bg-slate-50 border-slate-200 shadow-slate-200/50'} border rounded-xl p-2.5 shadow-sm transition-all duration-150 flex flex-col gap-2`}>
+    <div
+      onClick={handleCardClick}
+      className={`${
+        isDarkMode
+          ? 'bg-[#1e293b]/90 hover:bg-[#1e293b] border-slate-700/80 shadow-black/40'
+          : 'bg-white hover:bg-slate-50 border-slate-200 shadow-slate-200/50'
+      } border rounded-xl p-2.5 shadow-sm transition-all duration-150 flex flex-col gap-2 cursor-pointer hover:border-red-500/40 relative group`}
+    >
+      {/* Mentioned Notification Alert Tag */}
+      {isMentionedForMe && (
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-red-600/90 text-white text-[10px] font-bold tracking-tight shadow-sm self-start">
+          <AtSign className="w-3 h-3 animate-pulse" />
+          <span>Anda disebut di kartu ini</span>
+        </div>
+      )}
+
       {/* Card Header: Client & Tipe Tag */}
       <div className="flex items-center justify-between gap-1.5 text-xs">
         <span
@@ -114,7 +167,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
                 isDarkMode ? 'bg-red-950/60 text-red-300 border-red-800/40' : 'bg-red-50 text-red-700 border-red-200'
               } border`}
-              title="Klien Komersil berasal dari Spreadsheet CRM (Siap Integrasi Modern Web App)"
+              title="Klien Komersil berasal dari Spreadsheet CRM"
             >
               CRM Komersil
             </span>
@@ -148,39 +201,30 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         </span>
       </div>
 
-      {/* Jadwal Posting date if specified */}
-      {item.JadwalPosting && (
-        <div className={`flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded border ${isDarkMode ? 'text-amber-300/90 bg-amber-950/30 border-amber-900/40' : 'text-amber-800 bg-amber-50 border-amber-200'}`}>
-          <Calendar className="w-3 h-3 text-amber-500 shrink-0" />
-          <span className="truncate">Jadwal: {item.JadwalPosting}</span>
+      {/* Jadwal Posting & Fee (if role permits) */}
+      <div className={`flex items-center justify-between text-xs pt-1 border-t ${isDarkMode ? 'text-slate-400 border-slate-700/60' : 'text-slate-500 border-slate-200'}`}>
+        <div className="flex items-center gap-1 text-[11px]">
+          <Calendar className="w-3 h-3 text-slate-400" />
+          <span>{item.JadwalPosting || 'Belum ada jadwal'}</span>
         </div>
-      )}
-
-      {/* Fee Display (Hidden for Client role) */}
-      {roleConfig.showInternalFee && item.FeeAmount > 0 && (
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <div
-            className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded border self-start ${
-              isDarkMode
-                ? 'text-emerald-400 bg-emerald-950/40 border-emerald-900/40'
-                : 'text-emerald-700 bg-emerald-50 border-emerald-200'
+        {roleConfig.showInternalFee && (
+          <span
+            className={`font-mono text-[11px] font-bold ${
+              item.FeeAmount > 0
+                ? isDarkMode ? 'text-emerald-400' : 'text-emerald-600'
+                : 'text-slate-400'
             }`}
-            title="Nilai fee ditentukan dari persetujuan Approved / RtP dan siap ditarik ke Web App Database Staff"
           >
-            Fee: Rp {Number(item.FeeAmount).toLocaleString('id-ID')}
-          </div>
-          {item.Status === 'Approved / RtP' && (
-            <span
-              className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1"
-              title="Fee terkunci pada status Approved / RtP oleh Admin"
-            >
-              ✓ Fee Terkunci
-            </span>
-          )}
-        </div>
-      )}
+            {item.TipeProject === 'Internal'
+              ? 'Rp0 (Internal)'
+              : item.FeeAmount > 0
+              ? `Rp${item.FeeAmount.toLocaleString('id-ID')}`
+              : 'Menunggu RtP'}
+          </span>
+        )}
+      </div>
 
-      {/* Direct Links (Materi & File) */}
+      {/* Action Links: Materi & Drive File */}
       {(item.MateriKonten || item.File) && (
         <div className="flex flex-col gap-1 pt-0.5">
           {item.MateriKonten && (
@@ -210,7 +254,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         </div>
       )}
 
-      {/* Checklist Asset & Caption + Comment Badge */}
+      {/* Checklist Asset & Caption + Clickable Comment Badge */}
       <div className={`flex items-center justify-between text-xs pt-1 border-t ${isDarkMode ? 'text-slate-300 border-slate-700/60' : 'text-slate-700 border-slate-200'}`}>
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 select-none">
@@ -234,20 +278,28 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           </label>
         </div>
 
-        {/* Micro badge: ONLY shown if comments > 0 to keep UI 100% clean */}
-        {Boolean(item.comments && item.comments.length > 0) && (
-          <div
-            className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md border ${
-              isDarkMode
-                ? 'bg-red-500/10 text-red-400 border-red-500/30'
-                : 'bg-red-50 text-red-600 border-red-200'
-            }`}
-            title={`${item.comments!.length} Catatan Diskusi / Revisi`}
-          >
-            <MessageSquare className="w-3 h-3 text-red-500" />
-            <span className="tabular-nums">{item.comments!.length}</span>
-          </div>
-        )}
+        {/* Comment Badge: Clickable directly to open chat */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onOpenChat) onOpenChat(item);
+            else onEdit(item);
+          }}
+          className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md border transition-colors cursor-pointer ${
+            commentsCount > 0
+              ? isDarkMode
+                ? 'bg-red-500/15 hover:bg-red-500/25 text-red-400 border-red-500/30'
+                : 'bg-red-50 hover:bg-red-100 text-red-600 border-red-200'
+              : isDarkMode
+              ? 'bg-slate-800/80 hover:bg-slate-700 text-slate-400 border-slate-700'
+              : 'bg-slate-100 hover:bg-slate-200 text-slate-500 border-slate-200'
+          }`}
+          title={`${commentsCount} Catatan Diskusi (Klik untuk buka chat & mention)`}
+        >
+          <MessageSquare className={`w-3 h-3 ${commentsCount > 0 ? 'text-red-500' : 'text-slate-400'}`} />
+          <span className="tabular-nums">{commentsCount}</span>
+        </button>
       </div>
 
       {/* Status Controller (Role Aware) */}
@@ -290,22 +342,59 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         )}
       </div>
 
-      {/* Card Actions */}
+      {/* Card Actions: Tools, Chat Button, Edit, Delete */}
       <div className={`flex items-center justify-between pt-1 border-t mt-0.5 ${isDarkMode ? 'border-slate-700/60' : 'border-slate-200'}`}>
-        <span className="text-[10px] font-mono text-slate-400 truncate max-w-[80px]">
+        <span className="text-[10px] font-mono text-slate-400 truncate max-w-[70px]">
           {item.ProjectTools || 'Canva'}
         </span>
         <div className="flex items-center gap-1.5">
+          {/* Quick Chat / Diskusi Button */}
           <button
-            onClick={() => onEdit(item)}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onOpenChat) onOpenChat(item);
+              else onEdit(item);
+            }}
+            className={`flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md border transition-all cursor-pointer ${
+              commentsCount > 0
+                ? isDarkMode
+                  ? 'bg-red-950/40 hover:bg-red-950/70 text-red-400 border-red-800/60 font-semibold'
+                  : 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200 font-semibold'
+                : isDarkMode
+                ? 'text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border-slate-700'
+                : 'text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border-slate-300'
+            }`}
+            title="Buka ruang diskusi & mention tim"
+          >
+            <MessageSquare className={`w-3 h-3 ${commentsCount > 0 ? 'text-red-500' : 'text-slate-400'}`} />
+            <span>Diskusi</span>
+            {commentsCount > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-red-600 text-white tabular-nums">
+                {commentsCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(item);
+            }}
             className={`flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md border transition-colors cursor-pointer ${isDarkMode ? 'text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border-slate-700' : 'text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border-slate-300'}`}
           >
             <Edit2 className="w-3 h-3" />
             <span>Edit</span>
           </button>
+
           {roleConfig.canDelete && (
             <button
-              onClick={() => onDelete(item.ID)}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(item.ID);
+              }}
               className="text-slate-400 hover:text-red-500 p-1 rounded hover:bg-red-500/10 transition-colors cursor-pointer"
               title="Hapus Konten"
             >

@@ -22,7 +22,41 @@ class StorageService {
         return INITIAL_CONTENT_ITEMS;
       }
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : INITIAL_CONTENT_ITEMS;
+      if (!Array.isArray(parsed)) {
+        this.saveContent(INITIAL_CONTENT_ITEMS);
+        return INITIAL_CONTENT_ITEMS;
+      }
+
+      // Check if comments exist; if all cards have 0 comments, migrate sample comments
+      let hasMigrated = false;
+      const totalComments = parsed.reduce(
+        (acc, curr) => acc + (Array.isArray(curr.comments) ? curr.comments.length : 0),
+        0
+      );
+
+      if (totalComments === 0 && parsed.length > 0) {
+        if (INITIAL_CONTENT_ITEMS[0]?.comments) {
+          parsed[0].comments = INITIAL_CONTENT_ITEMS[0].comments;
+          hasMigrated = true;
+        }
+        if (parsed[1] && INITIAL_CONTENT_ITEMS[1]?.comments) {
+          parsed[1].comments = INITIAL_CONTENT_ITEMS[1].comments;
+          hasMigrated = true;
+        }
+      }
+
+      parsed.forEach((it) => {
+        if (!it.comments) {
+          it.comments = [];
+          hasMigrated = true;
+        }
+      });
+
+      if (hasMigrated) {
+        this.saveContent(parsed);
+      }
+
+      return parsed;
     } catch {
       return INITIAL_CONTENT_ITEMS;
     }
@@ -101,6 +135,7 @@ class StorageService {
         ChecklistCaption: !!itemData.ChecklistCaption,
         TipeProject: itemData.TipeProject || 'Komersil',
         TanggalApprove: itemData.Status === 'Approved / RtP' ? nowIso.slice(0, 10) : undefined,
+        comments: itemData.comments || [],
       };
       list.unshift(newItem);
     }

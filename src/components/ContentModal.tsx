@@ -38,6 +38,7 @@ interface ContentModalProps {
   isDarkMode?: boolean;
   currentUser?: StaffUser | null;
   onCommentsUpdated?: (itemId: string, comments: CardComment[]) => void;
+  initialTab?: 'detail' | 'comments';
 }
 
 const JENIS_KONTEN_OPTIONS: JenisKontenType[] = [
@@ -97,6 +98,7 @@ export const ContentModal: React.FC<ContentModalProps> = ({
   isDarkMode = true,
   currentUser,
   onCommentsUpdated,
+  initialTab = 'detail',
 }) => {
   const roleConfig = ROLES[activeRole] || ROLES.project_manager;
   const isFullOrAdmin =
@@ -145,6 +147,19 @@ export const ContentModal: React.FC<ContentModalProps> = ({
   const selectedCrmClient = useMemo(() => {
     return crmClients.find((c) => c.company === klien);
   }, [crmClients, klien]);
+
+  const matchingStaff = useMemo(() => {
+    if (mentionQuery === null) return [];
+    const q = mentionQuery.toLowerCase();
+    return staffDirectory
+      .filter((s) => s.name.toLowerCase().includes(q) || s.jabatan.toLowerCase().includes(q))
+      .slice(0, 5);
+  }, [mentionQuery, staffDirectory]);
+
+  const filteredComments = useMemo(() => {
+    if (activeFilterCategory === 'ALL') return commentsList;
+    return commentsList.filter((c) => c.category === activeFilterCategory);
+  }, [commentsList, activeFilterCategory]);
 
   useEffect(() => {
     if (editingItem) {
@@ -199,13 +214,20 @@ export const ContentModal: React.FC<ContentModalProps> = ({
       setChecklistCaption(false);
       setCommentsList([]);
     }
-    setActiveModalTab('detail');
+    setActiveModalTab(editingItem && initialTab ? initialTab : 'detail');
     setIsSubmitting(false);
     setCommentText('');
     setMentionQuery(null);
-  }, [editingItem, isOpen, defaultCreator]);
+  }, [editingItem, isOpen, defaultCreator, initialTab]);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (activeModalTab === 'comments') {
+      const timer = setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [activeModalTab]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -268,15 +290,47 @@ export const ContentModal: React.FC<ContentModalProps> = ({
 
   const allowedStatuses = getAllowedStatuses();
 
+  // Quick mention insert helper
+  const handleInsertQuickMention = (staff: StaffUser) => {
+    const mentionTag = `@${staff.name} `;
+    setCommentText((prev) => {
+      if (prev.endsWith(' ') || prev.length === 0) {
+        return prev + mentionTag;
+      }
+      return prev + ' ' + mentionTag;
+    });
+    setMentionQuery(null);
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        const len = textareaRef.current.value.length;
+        textareaRef.current.setSelectionRange(len, len);
+      }
+    }, 50);
+  };
+
   // Send new comment (Trello-style)
   const handleSendComment = () => {
     if (!editingItem || !commentText.trim()) return;
 
-    // Detect any mentions in the text (@StaffName)
+    // Detect all mentions in text (full name, first name, or clean handle)
     const foundMentions: string[] = [];
+    const textLower = commentText.toLowerCase();
+
     staffDirectory.forEach((staff) => {
-      if (commentText.toLowerCase().includes(`@${staff.name.toLowerCase()}`)) {
-        foundMentions.push(staff.name);
+      const fullName = staff.name.toLowerCase();
+      const firstName = staff.name.split(' ')[0].toLowerCase();
+      const igHandle = staff.instagram ? staff.instagram.toLowerCase().replace('@', '') : '';
+
+      if (
+        textLower.includes(`@${fullName}`) ||
+        textLower.includes(`@${firstName}`) ||
+        textLower.includes(`@[${fullName}]`) ||
+        (igHandle && textLower.includes(`@${igHandle}`))
+      ) {
+        if (!foundMentions.includes(staff.name)) {
+          foundMentions.push(staff.name);
+        }
       }
     });
 
@@ -330,12 +384,15 @@ export const ContentModal: React.FC<ContentModalProps> = ({
     const lastAtIndex = textBeforeCursor.lastIndexOf('@');
 
     if (lastAtIndex !== -1) {
-      const textBetween = textBeforeCursor.slice(lastAtIndex + 1);
-      // Valid mention query: no newline, length < 25
-      if (!textBetween.includes('\n') && textBetween.length < 25) {
-        setMentionQuery(textBetween);
-        setMentionCursorPos(lastAtIndex);
-        return;
+      // Must be at line start or preceded by whitespace
+      const charBeforeAt = lastAtIndex > 0 ? textBeforeCursor[lastAtIndex - 1] : ' ';
+      if (/\s/.test(charBeforeAt)) {
+        const textBetween = textBeforeCursor.slice(lastAtIndex + 1);
+        if (!textBetween.includes('\n') && textBetween.length < 30) {
+          setMentionQuery(textBetween);
+          setMentionCursorPos(lastAtIndex);
+          return;
+        }
       }
     }
     setMentionQuery(null);
@@ -360,38 +417,49 @@ export const ContentModal: React.FC<ContentModalProps> = ({
     }, 50);
   };
 
-  const matchingStaff = useMemo(() => {
-    if (mentionQuery === null) return [];
-    const q = mentionQuery.toLowerCase();
-    return staffDirectory
-      .filter((s) => s.name.toLowerCase().includes(q) || s.jabatan.toLowerCase().includes(q))
-      .slice(0, 5);
-  }, [mentionQuery, staffDirectory]);
-
-  const filteredComments = useMemo(() => {
-    if (activeFilterCategory === 'ALL') return commentsList;
-    return commentsList.filter((c) => c.category === activeFilterCategory);
-  }, [commentsList, activeFilterCategory]);
-
   const renderCommentText = (text: string) => {
-    const parts = text.split(/(@[a-zA-Z0-9_\s]{2,25}?(?=[.,!?:;\s]|$))/g);
+    // Generate patterns for all staff names (longest first to avoid greedy cutoff)
+    const staffPatterns = staffDirectory
+      .flatMap((s) => [s.name, s.name.split(' ')[0]])
+      .filter(Boolean)
+      .sort((a, b) => b.length - a.length)
+      .map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+
+    const pattern = new RegExp(
+      `(@\\[[^\\]]+\\]|@(?:${staffPatterns.join('|')})|@[a-zA-Z0-9_]{2,30})`,
+      'gi'
+    );
+
+    const parts = text.split(pattern);
+
     return parts.map((part, index) => {
       if (part.startsWith('@')) {
+        const cleanName = part.replace(/^@\[?/, '').replace(/\]?$/, '');
         const isMentionedMe =
-          currentUser?.name && part.toLowerCase().includes(currentUser.name.toLowerCase());
+          currentUser?.name &&
+          (cleanName.toLowerCase() === currentUser.name.toLowerCase() ||
+            cleanName.toLowerCase() === currentUser.name.split(' ')[0].toLowerCase() ||
+            currentUser.name.toLowerCase().includes(cleanName.toLowerCase()));
+
         return (
           <span
             key={index}
-            className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold text-xs ${
+            className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md font-bold text-xs mx-0.5 transition-all ${
               isMentionedMe
-                ? 'bg-red-600 text-white shadow-sm'
+                ? 'bg-red-600 text-white shadow-sm ring-1 ring-red-400 font-extrabold'
                 : isDarkMode
                 ? 'bg-red-500/20 text-red-400 border border-red-500/30'
                 : 'bg-red-50 text-red-600 border border-red-200'
             }`}
+            title={isMentionedMe ? 'Anda disebut dalam pesan ini' : `Mention untuk ${cleanName}`}
           >
-            <AtSign className="w-3 h-3 inline" />
-            {part.slice(1)}
+            <AtSign className="w-3 h-3 inline shrink-0" />
+            <span>{cleanName}</span>
+            {isMentionedMe && (
+              <span className="ml-1 text-[9px] uppercase px-1 py-0.2 bg-white text-red-600 rounded font-extrabold tracking-wider">
+                Kamu
+              </span>
+            )}
           </span>
         );
       }
@@ -423,6 +491,8 @@ export const ContentModal: React.FC<ContentModalProps> = ({
           : 'bg-slate-100 text-slate-700 border-slate-200';
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
@@ -818,6 +888,44 @@ export const ContentModal: React.FC<ContentModalProps> = ({
               </label>
             </div>
 
+            {/* Quick Discussion Link Callout */}
+            {editingItem && (
+              <div
+                onClick={() => setActiveModalTab('comments')}
+                className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                  isDarkMode
+                    ? 'bg-red-500/10 hover:bg-red-500/15 border-red-500/30 text-red-300'
+                    : 'bg-red-50 hover:bg-red-100 border-red-200 text-red-700'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-red-600/20 flex items-center justify-center text-red-500 shrink-0">
+                    <MessageSquare className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-xs sm:text-sm block">
+                      Diskusi & Catatan Tim ({commentsList.length})
+                    </span>
+                    <span className="text-[11px] opacity-80 block">
+                      Kirim instruksi, revisi, dan mention rekan tim seperti di Trello.
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveModalTab('comments');
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-xs shrink-0 cursor-pointer shadow-sm flex items-center gap-1"
+                >
+                  <span>Buka Chat</span>
+                  <span className="tabular-nums">({commentsList.length})</span>
+                  <span>→</span>
+                </button>
+              </div>
+            )}
+
             {/* Modal Footer Actions */}
             <div
               className={`flex items-center justify-end gap-3 pt-3 border-t ${
@@ -1047,6 +1155,31 @@ export const ContentModal: React.FC<ContentModalProps> = ({
                   <span className="text-[10px] text-slate-400 hidden sm:inline">
                     Ketik <span className="font-mono font-bold text-red-500">@</span> untuk mention tim
                   </span>
+                </div>
+
+                {/* Quick Mention Strip */}
+                <div className="flex items-center gap-1.5 overflow-x-auto py-1 shrink-0 no-scrollbar">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase shrink-0 flex items-center gap-1">
+                    <AtSign className="w-2.5 h-2.5 text-red-500" /> Tag Cepat:
+                  </span>
+                  {staffDirectory.map((staff) => {
+                    const shortName = staff.name.split(' ')[0];
+                    return (
+                      <button
+                        key={staff.id}
+                        type="button"
+                        onClick={() => handleInsertQuickMention(staff)}
+                        className={`px-2 py-0.5 rounded-full text-[11px] font-medium transition-all shrink-0 cursor-pointer border ${
+                          isDarkMode
+                            ? 'bg-slate-800/90 hover:bg-red-950/40 text-slate-300 hover:text-red-400 border-slate-700 hover:border-red-800/50'
+                            : 'bg-white hover:bg-red-50 text-slate-700 hover:text-red-700 border-slate-200 hover:border-red-300'
+                        }`}
+                        title={`Tag ${staff.name} (${staff.jabatan})`}
+                      >
+                        @{shortName}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <div className="flex items-end gap-2">

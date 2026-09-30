@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { ContentItem, UserRole, StatusType, TipeProjectType } from '../types';
+import { ContentItem, UserRole, StatusType, TipeProjectType, StaffUser } from '../types';
 import { normalizeClientName, normalizeCreatorName } from '../data/seedData';
 import { storageService } from '../services/storageService';
 import { ContentCard } from './ContentCard';
@@ -19,11 +19,13 @@ interface KanbanBoardProps {
   items: ContentItem[];
   activeRole: UserRole;
   onEditItem: (item: ContentItem) => void;
+  onOpenChat?: (item: ContentItem) => void;
   onDeleteItem: (id: string) => void;
   onStatusChange: (id: string, newStatus: StatusType) => void;
   onToggleChecklist: (id: string, field: 'ChecklistAsset' | 'ChecklistCaption', value: boolean) => void;
   onOpenNewContentModal: () => void;
   isDarkMode?: boolean;
+  currentUser?: StaffUser | null;
 }
 
 const COLUMNS: { id: StatusType; label: string; color: string; dotColor: string }[] = [
@@ -39,11 +41,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   items,
   activeRole,
   onEditItem,
+  onOpenChat,
   onDeleteItem,
   onStatusChange,
   onToggleChecklist,
   onOpenNewContentModal,
   isDarkMode = true,
+  currentUser,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedKlien, setSelectedKlien] = useState<string>('ALL');
@@ -443,10 +447,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                       item={item}
                       activeRole={activeRole}
                       onEdit={onEditItem}
+                      onOpenChat={onOpenChat}
                       onDelete={onDeleteItem}
                       onStatusChange={onStatusChange}
                       onToggleChecklist={onToggleChecklist}
                       isDarkMode={isDarkMode}
+                      currentUser={currentUser}
                     />
                   ))
                 )}
