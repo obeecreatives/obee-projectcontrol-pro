@@ -26,7 +26,9 @@ import {
   Clock,
   FileText,
   MessageCircle,
+  Sparkles,
 } from 'lucide-react';
+import { AiAssistantModal, AiMode } from './AiAssistantModal';
 
 interface ContentModalProps {
   isOpen: boolean;
@@ -140,6 +142,10 @@ export const ContentModal: React.FC<ContentModalProps> = ({
   const [mentionCursorPos, setMentionCursorPos] = useState<number>(-1);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
+
+  // AI Assistant Modal State
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [aiModalMode, setAiModalMode] = useState<AiMode>('caption');
 
   const crmClients = useMemo(() => storageService.getCrmClients(), []);
   const staffDirectory = useMemo(() => authService.getDirectory(), []);
@@ -706,9 +712,23 @@ export const ContentModal: React.FC<ContentModalProps> = ({
             {/* Ide Konten & Detail */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold uppercase mb-1.5 text-slate-400">
-                  Ide Konten (Sub-tema / Hook)
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold uppercase text-slate-400">
+                    Ide Konten (Sub-tema / Hook)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAiModalMode('brainstorm');
+                      setAiModalOpen(true);
+                    }}
+                    className="flex items-center gap-1 text-[11px] font-bold text-amber-500 hover:text-amber-400 transition-colors cursor-pointer"
+                    title="Brainstorm ide konten dengan Gemini AI"
+                  >
+                    <Sparkles className="w-3 h-3 text-amber-500 animate-pulse" />
+                    <span>✨ AI Brainstorm</span>
+                  </button>
+                </div>
                 <input
                   type="text"
                   value={ideKonten}
@@ -826,9 +846,23 @@ export const ContentModal: React.FC<ContentModalProps> = ({
 
             {/* Detail Brief & Copywriting */}
             <div>
-              <label className="block text-xs font-bold uppercase mb-1.5 text-slate-400">
-                Detail Brief & Instruksi Konten
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold uppercase text-slate-400">
+                  Detail Brief & Instruksi Konten
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAiModalMode('caption');
+                    setAiModalOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-600/15 hover:bg-red-600/25 border border-red-500/30 text-red-500 text-xs font-bold transition-all cursor-pointer shadow-sm"
+                  title="Buat copywriting caption & hook otomatis dengan Gemini AI"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-red-500 animate-pulse" />
+                  <span>✨ AI Generate Caption & Hook</span>
+                </button>
+              </div>
               <textarea
                 rows={3}
                 value={detail}
@@ -960,43 +994,60 @@ export const ContentModal: React.FC<ContentModalProps> = ({
           <div className="flex-1 flex flex-col min-h-0 text-sm overflow-hidden">
             {/* Category Filter Chips Bar */}
             <div
-              className={`px-5 sm:px-6 py-2 border-b flex items-center gap-1.5 overflow-x-auto shrink-0 ${
+              className={`px-5 sm:px-6 py-2 border-b flex items-center justify-between gap-1.5 overflow-x-auto shrink-0 ${
                 isDarkMode ? 'border-slate-800 bg-slate-900/40' : 'border-slate-200 bg-slate-50'
               }`}
             >
-              <span className="text-[11px] font-bold text-slate-400 uppercase mr-1 shrink-0">Filter:</span>
-              <button
-                type="button"
-                onClick={() => setActiveFilterCategory('ALL')}
-                className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer ${
-                  activeFilterCategory === 'ALL'
-                    ? 'bg-red-600 text-white shadow-sm'
-                    : isDarkMode
-                    ? 'text-slate-400 hover:text-white hover:bg-slate-800'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                }`}
-              >
-                Semua ({commentsList.length})
-              </button>
-              {COMMENT_CATEGORIES.map((cat) => {
-                const count = commentsList.filter((c) => c.category === cat).length;
-                return (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setActiveFilterCategory(cat)}
-                    className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer ${
-                      activeFilterCategory === cat
-                        ? 'bg-red-600 text-white shadow-sm'
-                        : isDarkMode
-                        ? 'text-slate-400 hover:text-white hover:bg-slate-800'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                    }`}
-                  >
-                    {cat} {count > 0 && `(${count})`}
-                  </button>
-                );
-              })}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-[11px] font-bold text-slate-400 uppercase mr-1 shrink-0">Filter:</span>
+                <button
+                  type="button"
+                  onClick={() => setActiveFilterCategory('ALL')}
+                  className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+                    activeFilterCategory === 'ALL'
+                      ? 'bg-red-600 text-white shadow-sm'
+                      : isDarkMode
+                      ? 'text-slate-400 hover:text-white hover:bg-slate-800'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                  }`}
+                >
+                  Semua ({commentsList.length})
+                </button>
+                {COMMENT_CATEGORIES.map((cat) => {
+                  const count = commentsList.filter((c) => c.category === cat).length;
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setActiveFilterCategory(cat)}
+                      className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+                        activeFilterCategory === cat
+                          ? 'bg-red-600 text-white shadow-sm'
+                          : isDarkMode
+                          ? 'text-slate-400 hover:text-white hover:bg-slate-800'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                      }`}
+                    >
+                      {cat} {count > 0 && `(${count})`}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {commentsList.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAiModalMode('summarize');
+                    setAiModalOpen(true);
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition-all cursor-pointer shrink-0 ml-2"
+                  title="Ringkas riwayat diskusi dan revisi menjadi checklist tindakan otomatis dengan Gemini AI"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                  <span>✨ AI Ringkas Revisi</span>
+                </button>
+              )}
             </div>
 
             {/* Scrollable Comments Feed */}
@@ -1220,6 +1271,49 @@ export const ContentModal: React.FC<ContentModalProps> = ({
           </div>
         )}
       </div>
+
+      {/* AI Assistant Studio Modal */}
+      <AiAssistantModal
+        isOpen={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        mode={aiModalMode}
+        isDarkMode={isDarkMode}
+        klien={
+          tipeProject === 'Internal'
+            ? klienInternal === 'Lainnya'
+              ? klienInternalLainnya || 'Internal obeecreatives'
+              : klienInternal
+            : klien
+        }
+        tema={tema}
+        ideKonten={ideKonten}
+        jenisKonten={jenisKonten}
+        tipeProject={tipeProject}
+        comments={commentsList}
+        onApplyCaption={(captionText) => {
+          setDetail((prev) => (prev ? `${prev}\n\n---\n📝 DRAFT CAPTION & HOOK (AI):\n${captionText}` : captionText));
+          setChecklistCaption(true);
+        }}
+        onApplyIdea={(ideaText) => {
+          setDetail((prev) => (prev ? `${prev}\n\n---\n💡 KONSEP IDE KONTEN (AI):\n${ideaText}` : ideaText));
+        }}
+        onApplySummaryNote={(summaryText) => {
+          if (!editingItem) return;
+          const res = storageService.addComment(editingItem.ID, {
+            authorName: 'Gemini AI Assistant',
+            authorRole: 'admin',
+            text: `📌 RINGKASAN REVISI OTOMATIS (AI):\n\n${summaryText}`,
+            category: 'Catatan Internal',
+          });
+          if (res.success && res.comment) {
+            const updated = [...commentsList, res.comment];
+            setCommentsList(updated);
+            if (onCommentsUpdated) {
+              onCommentsUpdated(editingItem.ID, updated);
+            }
+          }
+        }}
+      />
     </div>
   );
 };
