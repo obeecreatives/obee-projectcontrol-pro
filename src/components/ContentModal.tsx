@@ -501,12 +501,13 @@ export const ContentModal: React.FC<ContentModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-      <div
-        className={`${
-          isDarkMode ? 'bg-[#0f172a] border-slate-700 text-slate-100' : 'bg-white border-slate-200 text-slate-800'
-        } border w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden`}
-      >
+    <>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+        <div
+          className={`${
+            isDarkMode ? 'bg-[#0f172a] border-slate-700 text-slate-100' : 'bg-white border-slate-200 text-slate-800'
+          } border w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden`}
+        >
         {/* Modal Header */}
         <div
           className={`flex items-center justify-between px-5 sm:px-6 py-3.5 sm:py-4 border-b ${
@@ -1270,9 +1271,10 @@ export const ContentModal: React.FC<ContentModalProps> = ({
             </div>
           </div>
         )}
+        </div>
       </div>
 
-      {/* AI Assistant Studio Modal */}
+      {/* AI Assistant Studio Modal (Portaled independently) */}
       <AiAssistantModal
         isOpen={aiModalOpen}
         onClose={() => setAiModalOpen(false)}
@@ -1314,6 +1316,6 @@ export const ContentModal: React.FC<ContentModalProps> = ({
           }
         }}
       />
-    </div>
+    </>
   );
 };
