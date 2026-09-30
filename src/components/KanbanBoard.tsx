@@ -157,37 +157,38 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     <div className="flex flex-col gap-4">
       {/* Filter and Control Toolbar */}
       <div className={`${isDarkMode ? 'bg-[#1e293b]/70 border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-4 flex flex-col gap-3 transition-colors`}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
           {/* Search box & Add Content button */}
-          <div className="flex items-center gap-2.5 flex-1 min-w-[240px] max-w-xl">
-            <div className="relative flex-1 min-w-[180px]">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <div className="flex items-center gap-2 w-full sm:flex-1 sm:max-w-xl">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Cari ide, tema, klien, atau creator..."
-                className={`w-full pl-10 pr-4 py-2 text-sm ${isDarkMode ? 'bg-slate-900/90 text-slate-100 placeholder-slate-500 border-slate-700' : 'bg-slate-50 text-slate-900 placeholder-slate-400 border-slate-300'} border rounded-xl focus:outline-none focus:border-red-500`}
+                className={`w-full pl-9 pr-3 py-2 text-xs sm:text-sm ${isDarkMode ? 'bg-slate-900/90 text-slate-100 placeholder-slate-500 border-slate-700' : 'bg-slate-50 text-slate-900 placeholder-slate-400 border-slate-300'} border rounded-xl focus:outline-none focus:border-red-500`}
               />
             </div>
 
             {/* + Tambah Konten Button */}
             <button
               onClick={onOpenNewContentModal}
-              className="flex items-center gap-1.5 bg-[#E30000] hover:bg-[#c00000] text-white px-3 sm:px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm shadow-md shadow-red-950/30 transition-all active:scale-[0.98] shrink-0 cursor-pointer"
+              className="flex items-center gap-1.5 bg-[#E30000] hover:bg-[#c00000] text-white px-2.5 sm:px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm shadow-md shadow-red-950/30 transition-all active:scale-[0.98] shrink-0 cursor-pointer"
               title="Tambah Konten Baru"
             >
-              <Plus className="w-4 h-4" />
-              <span>Tambah Konten</span>
+              <Plus className="w-4 h-4 shrink-0" />
+              <span className="hidden xs:inline sm:inline">Tambah Konten</span>
+              <span className="xs:hidden sm:hidden">Tambah</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0 ml-auto">
+          <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
             {/* View Mode Toggle: Fit 6 Kolom vs Mode Scroll */}
-            <div className={`flex items-center ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-100 border-slate-200'} border rounded-lg p-0.5`}>
+            <div className={`flex items-center ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-100 border-slate-200'} border rounded-xl p-0.5 shrink-0`}>
               <button
                 onClick={() => setViewMode('fit')}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   viewMode === 'fit'
                     ? 'bg-red-600 text-white shadow-sm'
                     : isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-900'
@@ -195,11 +196,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 title="Tampilkan semua 6 kolom sekaligus dalam 1 layar"
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
-                <span>Fit 6 Kolom</span>
+                <span className="hidden sm:inline">Fit 6 Kolom</span>
+                <span className="sm:hidden text-[11px]">Fit</span>
               </button>
               <button
                 onClick={() => setViewMode('scroll')}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   viewMode === 'scroll'
                     ? 'bg-red-600 text-white shadow-sm'
                     : isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-900'
@@ -207,14 +209,17 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 title="Mode kolom lebar dengan bilah geser"
               >
                 <Columns className="w-3.5 h-3.5" />
-                <span>Mode Scroll</span>
+                <span className="hidden sm:inline">Mode Scroll</span>
+                <span className="sm:hidden text-[11px]">Scroll</span>
               </button>
             </div>
 
             {/* Content Summary Count */}
-            <div className={`text-xs ${isDarkMode ? 'text-slate-400 bg-slate-900/60 border-slate-800' : 'text-slate-600 bg-slate-100 border-slate-200'} border px-3 py-1.5 rounded-xl shrink-0 font-medium`}>
-              Menampilkan <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'} tabular-nums`}>{filteredItems.length}</span> dari{' '}
-              <span className="tabular-nums">{items.length}</span> konten
+            <div className={`text-xs ${isDarkMode ? 'text-slate-400 bg-slate-900/60 border-slate-800' : 'text-slate-600 bg-slate-100 border-slate-200'} border px-2.5 py-1.5 rounded-xl shrink-0 font-medium`}>
+              <span className="hidden sm:inline">Menampilkan </span>
+              <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'} tabular-nums`}>{filteredItems.length}</span>
+              <span className="text-slate-400">/{items.length}</span>
+              <span className="hidden sm:inline"> konten</span>
             </div>
           </div>
         </div>
@@ -222,12 +227,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         {/* Dropdown Filters Row */}
         <div className={`flex flex-wrap items-center gap-2 pt-2 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'} text-xs`}>
           {/* Klien filter */}
-          <div className="flex items-center gap-1.5">
-            <span className={`${isDarkMode ? 'text-slate-400' : 'text-slate-600'} font-medium`}>Klien:</span>
+          <div className="flex items-center gap-1.5 min-w-0 max-w-full">
+            <span className={`${isDarkMode ? 'text-slate-400' : 'text-slate-600'} font-medium shrink-0`}>Klien:</span>
             <select
               value={selectedKlien}
               onChange={(e) => setSelectedKlien(e.target.value)}
-              className={`${isDarkMode ? 'bg-slate-900 text-slate-200 border-slate-700' : 'bg-slate-50 text-slate-800 border-slate-300'} border rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-red-500`}
+              className={`${isDarkMode ? 'bg-slate-900 text-slate-200 border-slate-700' : 'bg-slate-50 text-slate-800 border-slate-300'} border rounded-lg px-2 py-1.5 focus:outline-none focus:border-red-500 max-w-[160px] sm:max-w-xs truncate`}
             >
               <option value="ALL">Semua Klien ({clientList.length})</option>
               {clientList.map((k) => (
@@ -239,28 +244,28 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           </div>
 
           {/* Tipe Project filter */}
-          <div className="flex items-center gap-1.5">
-            <span className={`${isDarkMode ? 'text-slate-400' : 'text-slate-600'} font-medium`}>Tipe:</span>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className={`${isDarkMode ? 'text-slate-400' : 'text-slate-600'} font-medium shrink-0`}>Tipe:</span>
             <select
               value={selectedTipe}
               onChange={(e) => setSelectedTipe(e.target.value as 'ALL' | TipeProjectType)}
-              className={`${isDarkMode ? 'bg-slate-900 text-slate-200 border-slate-700' : 'bg-slate-50 text-slate-800 border-slate-300'} border rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-red-500`}
+              className={`${isDarkMode ? 'bg-slate-900 text-slate-200 border-slate-700' : 'bg-slate-50 text-slate-800 border-slate-300'} border rounded-lg px-2 py-1.5 focus:outline-none focus:border-red-500 max-w-[140px] truncate`}
             >
               <option value="ALL">Semua Tipe</option>
-              <option value="Komersil">Komersil (Spreadsheet CRM)</option>
-              <option value="Internal">Internal Studio (Rp0)</option>
+              <option value="Komersil">Komersil (CRM)</option>
+              <option value="Internal">Internal (Rp0)</option>
             </select>
           </div>
 
           {/* Creator filter */}
-          <div className="flex items-center gap-1.5">
-            <span className={`${isDarkMode ? 'text-slate-400' : 'text-slate-600'} font-medium`}>Creator:</span>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className={`${isDarkMode ? 'text-slate-400' : 'text-slate-600'} font-medium shrink-0`}>Creator:</span>
             <select
               value={selectedCreator}
               onChange={(e) => setSelectedCreator(e.target.value)}
-              className={`${isDarkMode ? 'bg-slate-900 text-slate-200 border-slate-700' : 'bg-slate-50 text-slate-800 border-slate-300'} border rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-red-500`}
+              className={`${isDarkMode ? 'bg-slate-900 text-slate-200 border-slate-700' : 'bg-slate-50 text-slate-800 border-slate-300'} border rounded-lg px-2 py-1.5 focus:outline-none focus:border-red-500 max-w-[130px] truncate`}
             >
-              <option value="ALL">Semua Creator</option>
+              <option value="ALL">Semua</option>
               {creatorList.map((cr) => (
                 <option key={cr} value={cr}>
                   {cr}
@@ -270,23 +275,25 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           </div>
 
           {/* Date range inputs */}
-          <div className="flex items-center gap-1.5">
-            <span className={`${isDarkMode ? 'text-slate-400' : 'text-slate-600'} font-medium`}>Periode:</span>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className={`${isDarkMode ? 'bg-slate-900 text-slate-200 border-slate-700' : 'bg-slate-50 text-slate-800 border-slate-300'} border rounded-lg px-2 py-1 focus:outline-none focus:border-red-500 font-mono`}
-              title="Dari tanggal produksi"
-            />
-            <span className="text-slate-400">s/d</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className={`${isDarkMode ? 'bg-slate-900 text-slate-200 border-slate-700' : 'bg-slate-50 text-slate-800 border-slate-300'} border rounded-lg px-2 py-1 focus:outline-none focus:border-red-500 font-mono`}
-              title="Sampai tanggal produksi"
-            />
+          <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+            <span className={`${isDarkMode ? 'text-slate-400' : 'text-slate-600'} font-medium shrink-0`}>Periode:</span>
+            <div className="flex items-center gap-1">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className={`${isDarkMode ? 'bg-slate-900 text-slate-200 border-slate-700' : 'bg-slate-50 text-slate-800 border-slate-300'} border rounded-lg px-1.5 py-1 focus:outline-none focus:border-red-500 font-mono text-[11px] sm:text-xs max-w-[125px]`}
+                title="Dari tanggal produksi"
+              />
+              <span className="text-slate-400 text-[11px]">s/d</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className={`${isDarkMode ? 'bg-slate-900 text-slate-200 border-slate-700' : 'bg-slate-50 text-slate-800 border-slate-300'} border rounded-lg px-1.5 py-1 focus:outline-none focus:border-red-500 font-mono text-[11px] sm:text-xs max-w-[125px]`}
+                title="Sampai tanggal produksi"
+              />
+            </div>
           </div>
 
           {/* Reset filter button */}
@@ -304,7 +311,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
       {/* Top Navigator Slider Bar (Visible when in Scroll Mode) */}
       {viewMode === 'scroll' && (
-        <div className={`${isDarkMode ? 'bg-[#0f172a]/95 border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-2.5 sm:p-3 flex flex-col md:flex-row items-center justify-between gap-3 shadow-md transition-colors`}>
+        <div className={`${isDarkMode ? 'bg-[#0f172a]/95 border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-2.5 sm:p-3 flex flex-col md:flex-row items-center justify-between gap-2.5 sm:gap-3 shadow-md transition-colors max-w-full overflow-hidden`}>
           <div className="flex items-center gap-2 w-full md:w-auto justify-between sm:justify-start">
             <button
               onClick={() => scrollByAmount(-300)}
@@ -326,25 +333,25 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           </div>
 
           {/* Interactive Slider Bar */}
-          <div className="flex-1 w-full max-w-md flex items-center gap-2.5 px-2">
-            <span className="text-[11px] font-medium text-slate-400 shrink-0">Kolom 1</span>
+          <div className="flex-1 w-full max-w-md flex items-center gap-2 px-1">
+            <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 shrink-0">Kolom 1</span>
             <input
               type="range"
               min="0"
               max="100"
               value={scrollPercent}
               onChange={(e) => scrollToPercent(Number(e.target.value))}
-              className={`w-full h-2.5 ${isDarkMode ? 'bg-slate-800 border-slate-700/60' : 'bg-slate-200 border-slate-300'} rounded-lg appearance-none cursor-pointer accent-red-500 hover:accent-red-400 border`}
+              className={`w-full h-2 sm:h-2.5 ${isDarkMode ? 'bg-slate-800 border-slate-700/60' : 'bg-slate-200 border-slate-300'} rounded-lg appearance-none cursor-pointer accent-red-500 hover:accent-red-400 border`}
               title="Geser untuk melihat kolom"
             />
-            <span className="text-[11px] font-medium text-slate-400 shrink-0">Kolom 6</span>
+            <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 shrink-0">Kolom 6</span>
           </div>
 
           {/* Quick Jump Shortcuts */}
-          <div className="flex items-center gap-1.5 shrink-0 overflow-x-auto w-full md:w-auto justify-center md:justify-end">
+          <div className="flex items-center gap-1.5 shrink-0 overflow-x-auto max-w-full w-full md:w-auto justify-start sm:justify-end py-0.5">
             <button
               onClick={() => scrollToPercent(0)}
-              className={`px-2.5 py-1 text-[11px] font-medium rounded-lg transition-colors border cursor-pointer ${
+              className={`px-2.5 py-1 text-[11px] font-medium rounded-lg transition-colors border cursor-pointer shrink-0 ${
                 scrollPercent < 25
                   ? 'bg-red-500/20 text-red-500 border-red-500/40 font-semibold'
                   : isDarkMode ? 'bg-slate-900 text-slate-400 border-slate-800' : 'bg-slate-100 text-slate-600 border-slate-200'
@@ -354,7 +361,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             </button>
             <button
               onClick={() => scrollToPercent(50)}
-              className={`px-2.5 py-1 text-[11px] font-medium rounded-lg transition-colors border cursor-pointer ${
+              className={`px-2.5 py-1 text-[11px] font-medium rounded-lg transition-colors border cursor-pointer shrink-0 ${
                 scrollPercent >= 25 && scrollPercent <= 75
                   ? 'bg-blue-500/20 text-blue-500 border-blue-500/40 font-semibold'
                   : isDarkMode ? 'bg-slate-900 text-slate-400 border-slate-800' : 'bg-slate-100 text-slate-600 border-slate-200'
@@ -364,7 +371,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             </button>
             <button
               onClick={() => scrollToPercent(100)}
-              className={`px-2.5 py-1 text-[11px] font-medium rounded-lg transition-colors border cursor-pointer ${
+              className={`px-2.5 py-1 text-[11px] font-medium rounded-lg transition-colors border cursor-pointer shrink-0 ${
                 scrollPercent > 75
                   ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/40 font-semibold'
                   : isDarkMode ? 'bg-slate-900 text-slate-400 border-slate-800' : 'bg-slate-100 text-slate-600 border-slate-200'

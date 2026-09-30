@@ -204,7 +204,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Theme Mode Toggle (Sun / Moon) */}
           <button
             onClick={onToggleTheme}
-            className={`p-2 rounded-xl border transition-colors ${
+            className={`p-1.5 sm:p-2 rounded-xl border transition-colors ${
               isDarkMode
                 ? 'bg-slate-800/90 border-slate-700 text-amber-400 hover:bg-slate-700 hover:text-amber-300'
                 : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
@@ -237,8 +237,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={onSyncAll}
                 disabled={isSyncing}
                 className={`flex items-center gap-1.5 text-xs border ${
-                  onOpenSyncModal ? 'rounded-l-xl border-r-0' : 'rounded-xl'
-                } px-2.5 py-1.5 font-bold transition-all cursor-pointer ${
+                  onOpenSyncModal ? 'rounded-xl sm:rounded-l-xl sm:border-r-0' : 'rounded-xl'
+                } p-1.5 sm:px-2.5 sm:py-1.5 font-bold transition-all cursor-pointer ${
                   isSyncing
                     ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
                     : isDarkMode
@@ -253,7 +253,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               {onOpenSyncModal && (
                 <button
                   onClick={onOpenSyncModal}
-                  className={`p-1.5 text-xs border rounded-r-xl transition-colors cursor-pointer ${
+                  className={`hidden sm:flex p-1.5 text-xs border rounded-r-xl transition-colors cursor-pointer ${
                     isDarkMode
                       ? 'bg-slate-800/90 border-slate-700 text-slate-400 hover:text-white hover:bg-slate-700'
                       : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -285,17 +285,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* User Profile Info Badge */}
           <button
             onClick={onOpenIdentityModal}
-            className={`flex items-center gap-1.5 text-xs ${isDarkMode ? 'bg-slate-800/90 border-slate-700 text-slate-200 hover:bg-slate-700' : 'bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200'} border p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl transition-colors`}
+            className={`flex items-center gap-1.5 text-xs ${isDarkMode ? 'bg-slate-800/90 border-slate-700 text-slate-200 hover:bg-slate-700' : 'bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200'} border p-1 sm:px-2.5 sm:py-1.5 rounded-xl transition-colors`}
             title="Klik untuk profil, ganti PIN, atau ubah mode kerja"
           >
             <div className="w-6 h-6 rounded-lg bg-red-600/30 border border-red-500/40 text-red-500 flex items-center justify-center text-[11px] font-bold shrink-0">
               {(currentUser?.name || identityName).charAt(0)}
             </div>
-            <div className="text-left">
+            <div className="hidden sm:block text-left">
               <span className="font-semibold text-xs max-w-[80px] sm:max-w-[120px] truncate block leading-tight">
                 {(currentUser?.name || identityName).split(' ')[0]}
               </span>
-              <span className={`hidden sm:block text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'} leading-tight mt-0.5`}>
+              <span className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'} leading-tight mt-0.5`}>
                 {roleConfig.label}
               </span>
             </div>

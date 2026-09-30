@@ -93,14 +93,14 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
     return (
       <button
         onClick={handleTriggerClick}
-        className={`flex items-center gap-1.5 text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
+        className={`flex items-center gap-1.5 text-xs font-bold p-1.5 sm:px-3 sm:py-1.5 rounded-xl border transition-all cursor-pointer ${
           isDarkMode
             ? 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20 hover:text-red-300'
             : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100 hover:text-red-700'
         }`}
         title="Pasang aplikasi ini ke HP (Android/iOS) atau PC/Laptop"
       >
-        <Download className="w-3.5 h-3.5 text-red-500" />
+        <Download className="w-4 h-4 text-red-500" />
         <span className="hidden sm:inline">Install App</span>
       </button>
     );

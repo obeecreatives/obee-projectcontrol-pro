@@ -342,7 +342,7 @@ export default function App() {
       />
 
       {/* Main Workspace Area (Top Navbar + Content Viewport) */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto overflow-x-hidden">
         {/* Top Navbar Header */}
         <Navbar
           currentTab={currentTab}
@@ -367,7 +367,7 @@ export default function App() {
         />
 
         {/* Main Viewport Container */}
-        <main className="flex-1 w-full px-3 sm:px-6 py-5 sm:py-6">
+        <main className="flex-1 w-full max-w-full px-2.5 sm:px-6 py-4 sm:py-6 overflow-x-hidden">
           {currentTab === 'board' && (
             <KanbanBoard
               items={items}
