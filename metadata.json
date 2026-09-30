@@ -1,0 +1,6 @@
+{
+  "name": "obeecreatives Workspace OS",
+  "description": "Unified Workspace OS & Project Control Portal untuk agensi kreatif obeecreatives.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
