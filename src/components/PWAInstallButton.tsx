@@ -112,16 +112,21 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
       {renderTrigger()}
 
       {/* Comprehensive Install Guide Modal */}
-      {showModal &&
+      {showModal && typeof document !== 'undefined' &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto animate-in fade-in">
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-sm animate-in fade-in"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowModal(false);
+            }}
+          >
             <div
-              className={`w-full max-w-lg rounded-2xl border ${
+              className={`w-full max-w-lg max-h-[82vh] rounded-2xl border ${
                 isDarkMode ? 'bg-[#0f172a] border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
-              } shadow-2xl overflow-hidden flex flex-col max-h-[90vh] my-auto`}
+              } shadow-2xl overflow-hidden flex flex-col`}
             >
               {/* Header */}
-              <div className={`p-4 sm:p-5 border-b shrink-0 ${isDarkMode ? 'border-slate-800' : 'border-slate-100'} flex items-center justify-between`}>
+              <div className={`p-4 sm:px-5 sm:py-4 border-b shrink-0 ${isDarkMode ? 'border-slate-800' : 'border-slate-100'} flex items-center justify-between`}>
                 <div className="flex items-center gap-2.5">
                   <div className="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center text-white font-black text-sm shadow-md shrink-0">
                     oc
@@ -144,7 +149,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
               <div className={`grid grid-cols-3 border-b text-xs font-semibold shrink-0 ${isDarkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-100 bg-slate-50'}`}>
                 <button
                   onClick={() => setActiveTab('android')}
-                  className={`py-3 flex items-center justify-center gap-1.5 cursor-pointer border-b-2 transition-colors ${
+                  className={`py-2.5 flex items-center justify-center gap-1.5 cursor-pointer border-b-2 transition-colors ${
                     activeTab === 'android'
                       ? 'border-red-500 text-red-500 font-bold bg-red-500/10'
                       : isDarkMode ? 'border-transparent text-slate-400 hover:text-slate-200' : 'border-transparent text-slate-600 hover:text-slate-900'
@@ -155,7 +160,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('ios')}
-                  className={`py-3 flex items-center justify-center gap-1.5 cursor-pointer border-b-2 transition-colors ${
+                  className={`py-2.5 flex items-center justify-center gap-1.5 cursor-pointer border-b-2 transition-colors ${
                     activeTab === 'ios'
                       ? 'border-red-500 text-red-500 font-bold bg-red-500/10'
                       : isDarkMode ? 'border-transparent text-slate-400 hover:text-slate-200' : 'border-transparent text-slate-600 hover:text-slate-900'
@@ -166,7 +171,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('desktop')}
-                  className={`py-3 flex items-center justify-center gap-1.5 cursor-pointer border-b-2 transition-colors ${
+                  className={`py-2.5 flex items-center justify-center gap-1.5 cursor-pointer border-b-2 transition-colors ${
                     activeTab === 'desktop'
                       ? 'border-red-500 text-red-500 font-bold bg-red-500/10'
                       : isDarkMode ? 'border-transparent text-slate-400 hover:text-slate-200' : 'border-transparent text-slate-600 hover:text-slate-900'
@@ -202,18 +207,18 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
 
                 {activeTab === 'android' && (
                   <div className="space-y-3">
-                    <div className="font-bold text-sm text-slate-200 flex items-center gap-2">
+                    <div className={`font-bold text-sm flex items-center gap-2 ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                       <Smartphone className="w-4 h-4 text-red-500" />
                       <span>Panduan Pasang di HP Android (Chrome / Edge / Samsung Internet):</span>
                     </div>
-                    <ol className="space-y-2.5 text-slate-300 list-decimal list-inside pl-1 leading-relaxed">
-                      <li className="p-2.5 rounded-lg bg-slate-800/40 border border-slate-700/50">
+                    <ol className={`space-y-2.5 list-decimal list-inside pl-1 leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      <li className={`p-2.5 rounded-lg border ${isDarkMode ? 'bg-slate-800/40 border-slate-700/50' : 'bg-slate-50 border-slate-200'}`}>
                         Buka menu browser dengan menekan ikon <b>titik tiga (⋮)</b> di pojok kanan atas browser.
                       </li>
-                      <li className="p-2.5 rounded-lg bg-slate-800/40 border border-slate-700/50">
+                      <li className={`p-2.5 rounded-lg border ${isDarkMode ? 'bg-slate-800/40 border-slate-700/50' : 'bg-slate-50 border-slate-200'}`}>
                         Pilih menu <b>"Install app"</b> atau <b>"Tambahkan ke Layar Utama" (Add to Home screen)</b>.
                       </li>
-                      <li className="p-2.5 rounded-lg bg-slate-800/40 border border-slate-700/50">
+                      <li className={`p-2.5 rounded-lg border ${isDarkMode ? 'bg-slate-800/40 border-slate-700/50' : 'bg-slate-50 border-slate-200'}`}>
                         Konfirmasi dengan menekan <b>Install</b>. Ikon <b>obee OS</b> akan muncul di daftar aplikasi HP Anda layaknya aplikasi Play Store.
                       </li>
                     </ol>
@@ -222,25 +227,25 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
 
                 {activeTab === 'ios' && (
                   <div className="space-y-3">
-                    <div className="font-bold text-sm text-slate-200 flex items-center gap-2">
+                    <div className={`font-bold text-sm flex items-center gap-2 ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                       <Share2 className="w-4 h-4 text-red-500" />
                       <span>Panduan Pasang di iPhone / iPad (Safari):</span>
                     </div>
-                    <ol className="space-y-2.5 text-slate-300 list-decimal list-inside pl-1 leading-relaxed">
-                      <li className="p-2.5 rounded-lg bg-slate-800/40 border border-slate-700/50">
+                    <ol className={`space-y-2.5 list-decimal list-inside pl-1 leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      <li className={`p-2.5 rounded-lg border ${isDarkMode ? 'bg-slate-800/40 border-slate-700/50' : 'bg-slate-50 border-slate-200'}`}>
                         Pastikan Anda membuka aplikasi ini menggunakan browser <b>Safari</b>.
                       </li>
-                      <li className="p-2.5 rounded-lg bg-slate-800/40 border border-slate-700/50 flex items-center gap-2">
+                      <li className={`p-2.5 rounded-lg border flex items-center gap-2 ${isDarkMode ? 'bg-slate-800/40 border-slate-700/50' : 'bg-slate-50 border-slate-200'}`}>
                         <span>Tekan tombol <b>Share</b></span>
                         <Share2 className="w-4 h-4 text-sky-400 inline" />
                         <span>di bilah bawah Safari.</span>
                       </li>
-                      <li className="p-2.5 rounded-lg bg-slate-800/40 border border-slate-700/50 flex items-center gap-2">
+                      <li className={`p-2.5 rounded-lg border flex items-center gap-2 ${isDarkMode ? 'bg-slate-800/40 border-slate-700/50' : 'bg-slate-50 border-slate-200'}`}>
                         <span>Geser ke bawah lalu pilih</span>
                         <PlusSquare className="w-4 h-4 text-emerald-400 inline" />
                         <b>"Add to Home Screen" (Tambah ke Layar Utama)</b>.
                       </li>
-                      <li className="p-2.5 rounded-lg bg-slate-800/40 border border-slate-700/50">
+                      <li className={`p-2.5 rounded-lg border ${isDarkMode ? 'bg-slate-800/40 border-slate-700/50' : 'bg-slate-50 border-slate-200'}`}>
                         Tekan <b>"Add" (Tambah)</b> di pojok kanan atas. Aplikasi akan langsung terpasang di Home Screen iPhone/iPad Anda dalam mode fullscreen native!
                       </li>
                     </ol>
@@ -249,23 +254,23 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
 
                 {activeTab === 'desktop' && (
                   <div className="space-y-3">
-                    <div className="font-bold text-sm text-slate-200 flex items-center gap-2">
+                    <div className={`font-bold text-sm flex items-center gap-2 ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                       <Laptop className="w-4 h-4 text-red-500" />
                       <span>Panduan Pasang di PC & Laptop (Windows, Mac, Linux):</span>
                     </div>
-                    <ol className="space-y-2.5 text-slate-300 list-decimal list-inside pl-1 leading-relaxed">
-                      <li className="p-2.5 rounded-lg bg-slate-800/40 border border-slate-700/50">
+                    <ol className={`space-y-2.5 list-decimal list-inside pl-1 leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      <li className={`p-2.5 rounded-lg border ${isDarkMode ? 'bg-slate-800/40 border-slate-700/50' : 'bg-slate-50 border-slate-200'}`}>
                         Pada browser Chrome / Edge / Brave, perhatikan <b>bilah alamat (Address bar / URL bar)</b> di bagian atas kanan.
                       </li>
-                      <li className="p-2.5 rounded-lg bg-slate-800/40 border border-slate-700/50 flex items-center gap-2">
+                      <li className={`p-2.5 rounded-lg border flex items-center gap-2 ${isDarkMode ? 'bg-slate-800/40 border-slate-700/50' : 'bg-slate-50 border-slate-200'}`}>
                         <span>Klik ikon <b>Install / Pasang Aplikasi</b></span>
                         <Download className="w-4 h-4 text-red-500 inline" />
                         <span>di dalam kotak alamat URL.</span>
                       </li>
-                      <li className="p-2.5 rounded-lg bg-slate-800/40 border border-slate-700/50">
+                      <li className={`p-2.5 rounded-lg border ${isDarkMode ? 'bg-slate-800/40 border-slate-700/50' : 'bg-slate-50 border-slate-200'}`}>
                         Atau klik menu <b>titik tiga (⋮) &gt; Simpan dan bagikan (Cast, save, and share) &gt; Install obeecreatives Workspace OS</b>.
                       </li>
-                      <li className="p-2.5 rounded-lg bg-slate-800/40 border border-slate-700/50">
+                      <li className={`p-2.5 rounded-lg border ${isDarkMode ? 'bg-slate-800/40 border-slate-700/50' : 'bg-slate-50 border-slate-200'}`}>
                         Aplikasi akan terbuka di jendela mandiri (Standalone Window) tanpa bilah browser, dengan ikon di Desktop & Taskbar!
                       </li>
                     </ol>

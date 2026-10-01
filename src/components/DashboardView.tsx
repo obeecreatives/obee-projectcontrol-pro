@@ -3,6 +3,7 @@ import { ContentItem, UserRole, WorkMode } from '../types';
 import { ROLES, normalizeClientName, normalizeCreatorName } from '../data/seedData';
 import { storageService } from '../services/storageService';
 import { geoService } from '../services/geoService';
+import { KpiWidget } from './KpiWidget';
 import {
   FileText,
   DollarSign,
@@ -196,6 +197,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Executive KPI Widget */}
+      <KpiWidget items={items} activeRole={activeRole} isDarkMode={isDarkMode} />
+
       {/* Executive Stat Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         <div className={`${isDarkMode ? 'bg-[#1e293b]/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-4 flex flex-col justify-between`}>

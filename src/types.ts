@@ -182,3 +182,10 @@ export interface DefaultPasswordConfig {
   updatedAt?: string;
   updatedBy?: string;
 }
+
+export interface KpiTargets {
+  monthlyContentTarget: number;
+  monthlyRevenueTarget: number;
+  targetSlaDays: number;
+  onTimeGoalPercent: number;
+}

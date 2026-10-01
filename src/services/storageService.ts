@@ -1,4 +1,4 @@
-import { ContentItem, RateCardItem, GeneralLink, ActivityLog, StatusType, UserRole, CrmClientItem, CardComment } from '../types';
+import { ContentItem, RateCardItem, GeneralLink, ActivityLog, StatusType, UserRole, CrmClientItem, CardComment, KpiTargets } from '../types';
 import { INITIAL_CONTENT_ITEMS, INITIAL_RATE_CARDS, INITIAL_LINKS, FULL_ACCESS_EMAILS, INITIAL_CRM_DATA, KATEGORI_INTERNAL_OPTIONS } from '../data/seedData';
 import { geoService } from './geoService';
 
@@ -10,6 +10,14 @@ const KEY_ROLE = 'pcs_role';
 const KEY_IDENTITY = 'pcs_identity_nama';
 const KEY_GAS_URL = 'obee_pcs_gas_url_v1';
 const KEY_CRM_CLIENTS = 'obee_pcs_crm_clients_v1';
+const KEY_KPI_TARGETS = 'obee_pcs_kpi_targets_v1';
+
+export const DEFAULT_KPI_TARGETS: KpiTargets = {
+  monthlyContentTarget: 30,
+  monthlyRevenueTarget: 15000000,
+  targetSlaDays: 3,
+  onTimeGoalPercent: 85,
+};
 
 export const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbz_obeecreatives_project_control_v2/exec';
 
@@ -577,6 +585,30 @@ class StorageService {
       null,
       2
     );
+  }
+
+  getKpiTargets(): KpiTargets {
+    try {
+      const raw = localStorage.getItem(KEY_KPI_TARGETS);
+      if (!raw) return DEFAULT_KPI_TARGETS;
+      const parsed = JSON.parse(raw);
+      return {
+        monthlyContentTarget: Number(parsed.monthlyContentTarget) || DEFAULT_KPI_TARGETS.monthlyContentTarget,
+        monthlyRevenueTarget: Number(parsed.monthlyRevenueTarget) || DEFAULT_KPI_TARGETS.monthlyRevenueTarget,
+        targetSlaDays: Number(parsed.targetSlaDays) || DEFAULT_KPI_TARGETS.targetSlaDays,
+        onTimeGoalPercent: Number(parsed.onTimeGoalPercent) || DEFAULT_KPI_TARGETS.onTimeGoalPercent,
+      };
+    } catch {
+      return DEFAULT_KPI_TARGETS;
+    }
+  }
+
+  saveKpiTargets(targets: KpiTargets): void {
+    try {
+      localStorage.setItem(KEY_KPI_TARGETS, JSON.stringify(targets));
+    } catch (e) {
+      console.error('Failed to save KPI targets:', e);
+    }
   }
 }
 
