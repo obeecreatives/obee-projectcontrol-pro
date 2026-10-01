@@ -16,6 +16,7 @@ import { RateCardView } from './components/RateCardView';
 import { HeadlessGasView } from './components/HeadlessGasView';
 import { StaffDatabaseView } from './components/StaffDatabaseView';
 import { AccessSettingsView } from './components/AccessSettingsView';
+import { DeveloperDocsView } from './components/DeveloperDocsView';
 import { SyncModal } from './components/SyncModal';
 import { ContentModal } from './components/ContentModal';
 import { RoleSelectorModal } from './components/RoleSelectorModal';
@@ -39,6 +40,7 @@ import {
   Compass,
   Lock,
   RefreshCw,
+  BookOpen,
 } from 'lucide-react';
 
 interface Toast {
@@ -499,6 +501,27 @@ export default function App() {
               }}
             />
           )}
+          {currentTab === 'developer_docs' && (
+            ['project_manager', 'web_developer', 'admin'].includes(activeRole) ? (
+              <DeveloperDocsView activeRole={activeRole} isDarkMode={isDarkMode} />
+            ) : (
+              <div className={`${isDarkMode ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-8 text-center max-w-md mx-auto my-12 shadow-xl`}>
+                <div className="w-12 h-12 rounded-2xl bg-amber-950/60 border border-amber-800/40 text-amber-500 flex items-center justify-center mx-auto mb-4">
+                  <Lock className="w-6 h-6" />
+                </div>
+                <h3 className={`text-base font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Dokumentasi Sistem Khusus Developer</h3>
+                <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                  Buku panduan teknis dan cetak PDF hanya dapat diakses oleh <b>Web Developer</b>, <b>Project Manager</b>, dan <b>Admin</b>.
+                </p>
+                <button
+                  onClick={() => setCurrentTab('board')}
+                  className={`mt-5 px-4 py-2 ${isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'} text-xs font-semibold rounded-xl border transition-colors cursor-pointer`}
+                >
+                  Kembali ke Content Board
+                </button>
+              </div>
+            )
+          )}
         </main>
       </div>
 
@@ -586,6 +609,19 @@ export default function App() {
                 >
                   <Cpu className="w-4 h-4 text-emerald-500" />
                   <span>Headless GAS</span>
+                </button>
+              )}
+
+              {['project_manager', 'web_developer', 'admin'].includes(activeRole) && (
+                <button
+                  onClick={() => {
+                    setCurrentTab('developer_docs');
+                    setIsMobileMoreOpen(false);
+                  }}
+                  className={`flex items-center gap-2 p-3 ${isDarkMode ? 'bg-slate-900 border-slate-800 hover:bg-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-800'} border rounded-xl text-left font-semibold cursor-pointer`}
+                >
+                  <BookOpen className="w-4 h-4 text-amber-500" />
+                  <span>Panduan Sistem (PDF)</span>
                 </button>
               )}
 

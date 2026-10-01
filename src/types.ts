@@ -6,7 +6,8 @@ export type ViewTab =
   | 'staff_database'
   | 'ratecard'
   | 'headless_gas'
-  | 'access_settings';
+  | 'access_settings'
+  | 'developer_docs';
 
 export type UserRole =
   | 'project_manager'

@@ -11,6 +11,7 @@ import {
   Cpu,
   Users,
   ShieldCheck,
+  BookOpen,
   CheckCircle2,
   LogOut,
   Building2,
@@ -144,6 +145,10 @@ export const Navbar: React.FC<NavbarProps> = ({
         return { title: 'Database Tim & Staf', icon: <Users className="w-4 h-4 text-sky-400" /> };
       case 'headless_gas':
         return { title: 'Headless GAS Sync', icon: <Cpu className="w-4 h-4 text-emerald-400" /> };
+      case 'access_settings':
+        return { title: 'Pengaturan Akses & PIN', icon: <ShieldCheck className="w-4 h-4 text-red-400" /> };
+      case 'developer_docs':
+        return { title: 'Panduan Sistem (PDF)', icon: <BookOpen className="w-4 h-4 text-amber-400" /> };
       default:
         return { title: 'Project Control', icon: null };
     }

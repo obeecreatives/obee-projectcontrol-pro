@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   Users,
   ShieldCheck,
+  BookOpen,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -101,6 +102,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
             shortLabel: 'GAS Sync',
             icon: <Cpu className="w-5 h-5 text-emerald-500" />,
             description: 'Sinkronisasi Google Sheet (Dev)',
+          },
+        ]
+      : []),
+    ...(['project_manager', 'web_developer', 'admin'].includes(activeRole)
+      ? [
+          {
+            tab: 'developer_docs' as ViewTab,
+            label: 'Panduan Sistem (PDF)',
+            shortLabel: 'Panduan PDF',
+            icon: <BookOpen className="w-5 h-5 text-amber-500" />,
+            description: 'Dokumentasi teknis & cetak PDF',
           },
         ]
       : []),
