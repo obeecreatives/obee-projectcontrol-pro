@@ -42,8 +42,9 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
   isDarkMode = true,
   onRefreshDirectory,
 }) => {
-  const [subTab, setSubTab] = useState<'whitelist' | 'passwords' | 'self_service' | 'logs'>('whitelist');
+  const [subTab, setSubTab] = useState<'roles' | 'whitelist' | 'passwords' | 'self_service' | 'logs'>('roles');
   const [directory, setDirectory] = useState<StaffUser[]>(() => authService.getDirectory());
+  const [roleChangeFeedback, setRoleChangeFeedback] = useState<string | null>(null);
   const [defaultPasswords, setDefaultPasswords] = useState<DefaultPasswordConfig>(() =>
     authService.getDefaultPasswordConfig()
   );
@@ -52,6 +53,17 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
   // Filter & Search
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
+
+  const handleRoleChange = (email: string, newRole: UserRole) => {
+    const res = authService.updateUserRole(email, newRole, currentUser?.email || 'Admin');
+    if (res.success) {
+      refreshAll();
+      setRoleChangeFeedback(`Peran akun "${email}" berhasil diubah menjadi "${ROLES[newRole]?.title || newRole}".`);
+      setTimeout(() => setRoleChangeFeedback(null), 3500);
+    } else {
+      alert(res.error || 'Gagal mengubah peran.');
+    }
+  };
 
   // New Whitelist Registration Form State
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
@@ -461,6 +473,20 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
       {/* Subtab Navigation */}
       <div className={`flex items-center gap-2 border-b ${isDarkMode ? 'border-slate-800' : 'border-slate-200'} pb-2 text-xs font-semibold overflow-x-auto`}>
         <button
+          onClick={() => setSubTab('roles')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+            subTab === 'roles'
+              ? 'bg-[#E30000] text-white shadow-md shadow-red-950/40 font-bold'
+              : isDarkMode
+              ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <Sliders className="w-4 h-4" />
+          <span>Matriks & Pengaturan Izin Peran</span>
+        </button>
+
+        <button
           onClick={() => setSubTab('whitelist')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
             subTab === 'whitelist'
@@ -516,6 +542,201 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
           <span>Log Audit Keamanan ({securityLogs.length})</span>
         </button>
       </div>
+
+      {/* Role Change Feedback Banner */}
+      {roleChangeFeedback && (
+        <div className="p-3.5 rounded-xl bg-emerald-950/90 border border-emerald-800 text-emerald-200 text-xs font-semibold flex items-center justify-between shadow-lg animate-in fade-in">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{roleChangeFeedback}</span>
+          </div>
+          <button
+            onClick={() => setRoleChangeFeedback(null)}
+            className="text-emerald-400 hover:text-white p-1 cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Subtab 0: Role Settings & Permission Matrix */}
+      {subTab === 'roles' && (
+        <div className="space-y-6">
+          {/* Section 1: Role Overview Cards */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className={`font-bold text-sm sm:text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  1. Matriks Hak Akses & Izin Peran Sistem (RBAC)
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Ringkasan kapabilitas hak alur kerja Kanban, kunci tarif, dan kewenangan setiap peran.
+                </p>
+              </div>
+              <span className={`text-xs px-2.5 py-1 rounded-lg border font-mono font-bold ${
+                isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-300 text-slate-700'
+              }`}>
+                {Object.keys(ROLES).length} Peran Terkonfigurasi
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Object.entries(ROLES).map(([roleKey, role]) => {
+                const countMembers = directory.filter((u) => u.role === roleKey).length;
+
+                return (
+                  <div
+                    key={roleKey}
+                    className={`p-4 rounded-2xl border flex flex-col justify-between transition-all ${
+                      isDarkMode
+                        ? 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+                        : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${role.badgeColor}`}>
+                          {role.label}
+                        </span>
+                        <span className={`text-[11px] font-mono px-2 py-0.5 rounded ${
+                          isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-700'
+                        }`}>
+                          {countMembers} Staf
+                        </span>
+                      </div>
+
+                      <h4 className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'} mb-1`}>
+                        {role.title}
+                      </h4>
+
+                      <p className="text-xs text-slate-400 leading-relaxed mb-4 min-h-[40px]">
+                        {role.description}
+                      </p>
+
+                      <div className="space-y-1.5 pt-3 border-t border-slate-700/50 text-[11px]">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400">Alur Geser Bebas:</span>
+                          <span className={role.canChangeStatusToAll ? 'text-emerald-400 font-bold' : 'text-slate-500'}>
+                            {role.canChangeStatusToAll ? '✅ Bebas Semua' : 'Draft -> Req Approval'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400">Approval ke RtP:</span>
+                          <span className={role.canApproveToRtP ? 'text-emerald-400 font-bold' : 'text-red-400 font-semibold'}>
+                            {role.canApproveToRtP ? '✅ Berhak Kunci Fee' : '❌ Dilarang (Reviewer Only)'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400">Edit Rate Card:</span>
+                          <span className={role.canEditRateCard ? 'text-emerald-400 font-bold' : 'text-slate-500'}>
+                            {role.canEditRateCard ? '✅ Ya' : '❌ Tidak'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400">Lihat Fee / Omzet:</span>
+                          <span className={role.showInternalFee ? 'text-emerald-400 font-bold' : 'text-slate-500'}>
+                            {role.showInternalFee ? '✅ Ya' : '❌ Disembunyikan'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400">Hapus Konten:</span>
+                          <span className={role.canDelete ? 'text-emerald-400 font-bold' : 'text-slate-500'}>
+                            {role.canDelete ? '✅ Ya' : '❌ Tidak'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Section 2: Interactive Role Assignment Table */}
+          <div className={`p-5 rounded-2xl border ${
+            isDarkMode ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'
+          } shadow-lg space-y-4`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className={`font-bold text-sm sm:text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  2. Kelola Penugasan Peran Staf
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Ubah hak peran staf secara langsung dengan memilih peran dari dropdown. Perubahan langsung tersimpan ke sistem.
+                </p>
+              </div>
+
+              <div className="relative max-w-xs w-full">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Cari staf..."
+                  className={`w-full pl-9 pr-3 py-2 text-xs rounded-xl border focus:outline-none focus:border-red-500 ${
+                    isDarkMode ? 'bg-slate-900 border-slate-700 text-slate-100' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
+                />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className={`border-b text-[11px] font-bold uppercase tracking-wider ${
+                  isDarkMode ? 'bg-slate-900/80 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+                }`}>
+                  <tr>
+                    <th className="py-3 px-4">Nama Staf & Email</th>
+                    <th className="py-3 px-4">Divisi & Jabatan</th>
+                    <th className="py-3 px-4">Peran Saat Ini</th>
+                    <th className="py-3 px-4">Ubah Hak Peran (Dropdown Cepat)</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800 text-slate-300' : 'divide-slate-200 text-slate-700'}`}>
+                  {filteredDirectory.map((staff) => (
+                    <tr key={staff.email} className={`${isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'} transition-colors`}>
+                      <td className="py-3 px-4">
+                        <div className="font-bold text-slate-200">{staff.name}</div>
+                        <div className="font-mono text-[11px] text-slate-400">{staff.email}</div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="font-medium text-slate-300">{staff.divisi || '-'}</div>
+                        <div className="text-[11px] text-slate-400">{staff.jabatan || '-'}</div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${
+                          ROLES[staff.role]?.badgeColor || 'bg-slate-500/10 text-slate-400 border-slate-500/30'
+                        }`}>
+                          {ROLES[staff.role]?.title || staff.role}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <select
+                          value={staff.role}
+                          onChange={(e) => handleRoleChange(staff.email, e.target.value as UserRole)}
+                          className={`px-3 py-1.5 text-xs rounded-xl border font-bold cursor-pointer transition-colors focus:outline-none focus:border-red-500 ${
+                            isDarkMode
+                              ? 'bg-slate-900 border-slate-700 text-slate-200 hover:bg-slate-800'
+                              : 'bg-white border-slate-300 text-slate-800 hover:bg-slate-50'
+                          }`}
+                        >
+                          <option value="project_manager">Project Manager / Site Engineer</option>
+                          <option value="admin">Admin</option>
+                          <option value="web_developer">Web Developer</option>
+                          <option value="staff_creator">Staff / Creator / Freelancer</option>
+                          <option value="site_engineer">Site Engineer</option>
+                          <option value="vendor_lapangan">Vendor Lapangan</option>
+                          <option value="client">Client Portal</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Subtab 1: Whitelist Management */}
       {subTab === 'whitelist' && (

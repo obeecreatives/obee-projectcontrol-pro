@@ -24,6 +24,7 @@ import {
   Database,
   Lock,
   GitBranch,
+  Palette,
 } from 'lucide-react';
 
 interface DeveloperDocsViewProps {
@@ -36,14 +37,25 @@ export const DeveloperDocsView: React.FC<DeveloperDocsViewProps> = ({
   isDarkMode = true,
 }) => {
   const [copied, setCopied] = useState(false);
-  const [activeSection, setActiveSection] = useState<string>('all');
+  const [printScope, setPrintScope] = useState<'all' | 'palette'>('all');
 
   const contentItems = storageService.getContent();
   const staffList = authService.getDirectory();
   const rateCards = storageService.getRateCards();
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrintAll = () => {
+    setPrintScope('all');
+    setTimeout(() => {
+      window.print();
+    }, 100);
+  };
+
+  const handlePrintPalette = () => {
+    setPrintScope('palette');
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => setPrintScope('all'), 1000);
+    }, 100);
   };
 
   const handleCopyMarkdown = () => {
@@ -71,7 +83,57 @@ Menangani siklus produksi konten, kalender editorial, presensi tim geolokasi, pa
 - PWA Compliant: Standalone mode, service worker caching, install guide modal (Android, iOS, PC).
 - Storage: Local-First (localStorage) dengan live sync on-demand ke Google Apps Script (GAS).
 
-## 3. Fitur Utama & Isi Aplikasi
+## 3. Identitas & Palet Warna Resmi (Design Tokens)
+### Brand Utama (Signature Red):
+- Primary Brand Red: #E30000 (text-[#E30000] / bg-[#E30000]) - Logo, tag komersil
+- Accent Action Red: #DC2626 (bg-red-600 / hover:bg-red-700) - Tombol aksi utama, active marker
+- Highlight Red: #EF4444 (selection:bg-red-500) - Teks seleksi
+- Dark Commercial Badge: rgba(69, 10, 10, 0.6) (bg-red-950/60 border-red-800/40 text-red-300)
+- Light Commercial Badge: #FEF2F2 (bg-red-50 border-red-200 text-red-700)
+
+### Mode Gelap (Dark Mode - Default):
+- Canvas Root: #0B0F17 (bg-[#0b0f17])
+- Sidebar Background: #0B1120 (bg-[#0b1120])
+- Navbar & Header: #0F172A (95% blur) (bg-[#0f172a]/95)
+- Column & Containers: #0F172A (90% blur) (bg-[#0f172a]/90)
+- Surface Card & Modal: #1E293B (bg-[#1e293b]/90, hover:bg-[#1e293b])
+- Input & Dropdown: #0F172A (bg-slate-900 border-slate-700)
+- Border Utama: #1E293B (border-slate-800)
+- Border Card / Interactive: #334155 (border-slate-700/80)
+- Teks Primer: #F1F5F9 / #FFFFFF (text-slate-100 / text-white)
+- Teks Sekunder: #94A3B8 (text-slate-400)
+- Teks Tersier / Muted: #64748B (text-slate-500)
+
+### Mode Terang (Light Mode):
+- Canvas Root: #F8FAFC (bg-[#f8fafc] - Slate 50)
+- Sidebar Background: #F8FAFC (bg-slate-50 border-slate-200)
+- Navbar & Header: #FFFFFF (95% blur) (bg-white/95 border-slate-200)
+- Column & Containers: #F1F5F9 (bg-slate-100/90)
+- Surface Card & Modal: #FFFFFF (bg-white border-slate-200)
+- Card Hover: #F8FAFC (hover:bg-slate-50)
+- Input & Dropdown: #F8FAFC (bg-slate-50 border-slate-300)
+- Border Utama: #E2E8F0 (border-slate-200)
+- Border Card / Form: #CBD5E1 (border-slate-300)
+- Teks Primer: #0F172A (text-slate-900)
+- Teks Sekunder: #475569 (text-slate-600 / text-slate-700)
+- Teks Tersier / Muted: #94A3B8 (text-slate-400 / text-slate-500)
+
+### Kanban Status Workflow:
+- New Idea: #94A3B8 (dot bg-slate-400, border-slate-500)
+- On Progress: #FBBF24 (dot bg-amber-400, border-amber-500)
+- Request Approval: #60A5FA (dot bg-blue-400, border-blue-500)
+- Approved / RtP: #34D399 (dot bg-emerald-400, border-emerald-500)
+- Scheduling: #2DD4BF (dot bg-teal-400, border-teal-500)
+- Published: #818CF8 (dot bg-indigo-400, border-indigo-500)
+
+### Role Badges:
+- PM / Site Engineer: bg-red-500/10 text-red-400 border-red-500/30
+- Web Developer: bg-emerald-500/10 text-emerald-400 border-emerald-500/30
+- Admin: bg-amber-500/10 text-amber-400 border-amber-500/30
+- Staff Creator: bg-blue-500/10 text-blue-400 border-blue-500/30
+- Client Portal: bg-purple-500/10 text-purple-400 border-purple-500/30
+
+## 4. Fitur Utama & Isi Aplikasi
 1. Kanban Board (6 Alur Kolom): New Idea -> On Progress -> Request Approval -> Approved / RtP -> Scheduling -> Published.
 2. Calendar View: Timeline produksi dan jadwal posting.
 3. Executive KPI Widget: On-Time SLA %, Output Pace Tracker, Realisasi Omzet/Fee, Turnaround Days, Capacity Index, Overdue Monitor.
@@ -81,17 +143,17 @@ Menangani siklus produksi konten, kalender editorial, presensi tim geolokasi, pa
 7. Headless GAS Sync: Sinkronisasi 2-arah ke Google Spreadsheet via webhook /exec.
 8. Access Settings: Whitelist email, default PIN, reset PIN staf, dan audit security log.
 
-## 4. Matriks Peran & Hak Akses (RBAC)
+## 5. Matriks Peran & Hak Akses (RBAC)
 - Project Manager, Admin, Web Developer: Akses penuh semua modul, approval final, dan edit fee.
 - Staff Creator, Site Engineer, Vendor: Dibatasi pada alur New Idea -> Request Approval, fee disembunyikan.
 - Client: Hanya baca dan berikan feedback approval.
 
-## 5. SOP Penggunaan Harian
+## 6. SOP Penggunaan Harian
 - Alur Produksi: Buat Konten -> Garap -> Minta Approval -> Approved -> Posting.
 - Presensi: Buka profil -> Set mode lokasi -> Izinkan browser GPS.
 - Target KPI: Buka Dashboard -> Klik Target KPI -> Atur target bulanan -> Simpan.
 
-## 6. Deployment Vercel & Troubleshooting
+## 7. Deployment Vercel & Troubleshooting
 - Framework Preset: Vite
 - Build Command: npm run build
 - Output Directory: dist
@@ -104,7 +166,7 @@ Menangani siklus produksi konten, kalender editorial, presensi tim geolokasi, pa
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-12">
+    <div className={`flex flex-col gap-6 max-w-5xl mx-auto pb-12 ${printScope === 'palette' ? 'print-palette-only' : ''}`}>
       {/* Print Specific CSS Styles */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
@@ -113,6 +175,9 @@ Menangani siklus produksi konten, kalender editorial, presensi tim geolokasi, pa
             color: #0f172a !important;
           }
           aside, header, nav, .no-print {
+            display: none !important;
+          }
+          .print-palette-only .print-non-palette {
             display: none !important;
           }
           .print-container {
@@ -127,6 +192,10 @@ Menangani siklus produksi konten, kalender editorial, presensi tim geolokasi, pa
             page-break-inside: avoid;
             background: #ffffff !important;
             color: #0f172a !important;
+          }
+          .swatch-box {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
         }
       ` }} />
@@ -151,13 +220,13 @@ Menangani siklus produksi konten, kalender editorial, presensi tim geolokasi, pa
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
-                Dokumen resmi arsitektur teknis, panduan operasional, matriks RBAC, konfigurasi deployment, serta changelog pembaruan fitur <b>obeecreatives Workspace OS</b>.
+                Dokumen resmi arsitektur teknis, identitas palet warna, panduan operasional, matriks RBAC, konfigurasi deployment, serta changelog pembaruan fitur <b>obeecreatives Workspace OS</b>.
               </p>
             </div>
           </div>
 
           {/* Action Buttons: Export to PDF & Copy Markdown */}
-          <div className="flex items-center gap-2 self-start md:self-auto shrink-0 no-print">
+          <div className="flex items-center gap-2 self-start md:self-auto shrink-0 no-print flex-wrap">
             <button
               onClick={handleCopyMarkdown}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${
@@ -174,12 +243,25 @@ Menangani siklus produksi konten, kalender editorial, presensi tim geolokasi, pa
             </button>
 
             <button
-              onClick={handlePrint}
+              onClick={handlePrintPalette}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                isDarkMode
+                  ? 'bg-slate-800 hover:bg-slate-700 text-amber-400 border-amber-500/40'
+                  : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-300'
+              }`}
+              title="Cetak atau unduh dokumen PDF khusus Palet Warna (Design Tokens)"
+            >
+              <Palette className="w-4 h-4 text-amber-500" />
+              <span>Cetak PDF Palet Warna</span>
+            </button>
+
+            <button
+              onClick={handlePrintAll}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#E30000] hover:bg-[#c00000] text-white shadow-md shadow-red-500/20 cursor-pointer transition-all active:scale-95"
-              title="Cetak atau simpan sebagai dokumen PDF resmi"
+              title="Cetak atau simpan seluruh panduan sebagai dokumen PDF resmi"
             >
               <Printer className="w-4 h-4" />
-              <span>Cetak / Simpan PDF</span>
+              <span>Cetak Seluruh PDF</span>
             </button>
           </div>
         </div>
@@ -214,7 +296,7 @@ Menangani siklus produksi konten, kalender editorial, presensi tim geolokasi, pa
       </div>
 
       {/* Chapter 1: Arsitektur & Struktur Direktori */}
-      <section className={`${isDarkMode ? 'bg-[#1e293b]/70 border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-5 sm:p-6 transition-colors print-card`}>
+      <section className={`${isDarkMode ? 'bg-[#1e293b]/70 border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-5 sm:p-6 transition-colors print-card print-non-palette`}>
         <div className="flex items-center gap-2 mb-3">
           <Layers className="w-5 h-5 text-red-500" />
           <h2 className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -257,7 +339,7 @@ Menangani siklus produksi konten, kalender editorial, presensi tim geolokasi, pa
       </section>
 
       {/* Chapter 2: Aspek Teknis & Tech Stack */}
-      <section className={`${isDarkMode ? 'bg-[#1e293b]/70 border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-5 sm:p-6 transition-colors print-card`}>
+      <section className={`${isDarkMode ? 'bg-[#1e293b]/70 border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-5 sm:p-6 transition-colors print-card print-non-palette`}>
         <div className="flex items-center gap-2 mb-3">
           <Code2 className="w-5 h-5 text-sky-400" />
           <h2 className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -287,12 +369,232 @@ Menangani siklus produksi konten, kalender editorial, presensi tim geolokasi, pa
         </div>
       </section>
 
-      {/* Chapter 3: Modul Fitur Utama */}
+      {/* Chapter 3: Identitas & Palet Warna Resmi (Design Tokens) */}
       <section className={`${isDarkMode ? 'bg-[#1e293b]/70 border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-5 sm:p-6 transition-colors print-card`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <Palette className="w-5 h-5 text-amber-500" />
+            <div>
+              <h2 className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                3. Identitas &amp; Palet Warna Resmi (Design Tokens)
+              </h2>
+              <p className="text-xs text-slate-400">
+                Spesifikasi warna baku untuk Mode Terang, Mode Gelap, Alur Kanban, dan Hak Akses.
+              </p>
+            </div>
+          </div>
+
+          <div className="no-print">
+            <button
+              onClick={handlePrintPalette}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 cursor-pointer transition-colors"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Cetak Bagian Ini (PDF)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 3.1 Brand Signature Red */}
+        <div className="mb-5">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-red-500 mb-2.5">
+            A. Brand Utama &amp; Signature Red
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+            <div className={`p-3 rounded-xl border flex items-center gap-3 ${isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="w-10 h-10 rounded-lg shrink-0 shadow swatch-box flex items-center justify-center font-black text-white text-[10px]" style={{ backgroundColor: '#E30000' }}>
+                oc
+              </div>
+              <div className="min-w-0">
+                <div className="font-bold text-slate-200">Primary Brand Red</div>
+                <div className="font-mono text-[11px] text-red-400 font-semibold">#E30000</div>
+                <div className="text-[10px] text-slate-500 truncate">text-[#E30000] · Logo</div>
+              </div>
+            </div>
+
+            <div className={`p-3 rounded-xl border flex items-center gap-3 ${isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="w-10 h-10 rounded-lg shrink-0 shadow swatch-box" style={{ backgroundColor: '#DC2626' }} />
+              <div className="min-w-0">
+                <div className="font-bold text-slate-200">Accent Action Red</div>
+                <div className="font-mono text-[11px] text-red-400 font-semibold">#DC2626</div>
+                <div className="text-[10px] text-slate-500 truncate">bg-red-600 · Tombol CTA</div>
+              </div>
+            </div>
+
+            <div className={`p-3 rounded-xl border flex items-center gap-3 ${isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="w-10 h-10 rounded-lg shrink-0 shadow swatch-box" style={{ backgroundColor: '#EF4444' }} />
+              <div className="min-w-0">
+                <div className="font-bold text-slate-200">Selection Highlight</div>
+                <div className="font-mono text-[11px] text-red-400 font-semibold">#EF4444</div>
+                <div className="text-[10px] text-slate-500 truncate">selection:bg-red-500</div>
+              </div>
+            </div>
+
+            <div className={`p-3 rounded-xl border flex items-center gap-3 ${isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="w-10 h-10 rounded-lg shrink-0 border border-red-800/40 swatch-box" style={{ backgroundColor: '#450a0a' }} />
+              <div className="min-w-0">
+                <div className="font-bold text-slate-200">Commercial Badge</div>
+                <div className="font-mono text-[11px] text-red-300 font-semibold">rgba(69,10,10,.6)</div>
+                <div className="text-[10px] text-slate-500 truncate">bg-red-950/60 · CRM Tag</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3.2 Dual Theme Comparison Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5 text-xs">
+          {/* Dark Mode Theme */}
+          <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-slate-900/80 border-slate-700/80' : 'bg-slate-900 text-slate-100 border-slate-800'} swatch-box`}>
+            <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">
+              <span className="font-bold text-amber-400">🌙 Mode Gelap (Dark Mode)</span>
+              <span className="text-[10px] font-mono text-slate-400">Default System</span>
+            </div>
+            <div className="space-y-2 font-mono text-[11px]">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Canvas Root:</span>
+                <span className="text-white font-bold bg-[#0b0f17] px-2 py-0.5 rounded border border-slate-800">#0B0F17</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Sidebar Rail:</span>
+                <span className="text-white font-bold bg-[#0b1120] px-2 py-0.5 rounded border border-slate-800">#0B1120</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Navbar &amp; Columns:</span>
+                <span className="text-white font-bold bg-[#0f172a] px-2 py-0.5 rounded border border-slate-800">#0F172A (95% blur)</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Surface Cards &amp; Modals:</span>
+                <span className="text-white font-bold bg-[#1e293b] px-2 py-0.5 rounded border border-slate-700">#1E293B</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Borders (Default):</span>
+                <span className="text-slate-300 font-bold">#1E293B (border-slate-800)</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Borders (Active Cards):</span>
+                <span className="text-slate-300 font-bold">#334155 (border-slate-700)</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Text Primer / Body:</span>
+                <span className="text-slate-100 font-bold">#F1F5F9 (text-slate-100)</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Text Sekunder / Muted:</span>
+                <span className="text-slate-400 font-bold">#94A3B8 / #64748B</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Light Mode Theme */}
+          <div className="p-4 rounded-xl border bg-[#f8fafc] text-slate-900 border-slate-300 swatch-box">
+            <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-200">
+              <span className="font-bold text-blue-600">☀️ Mode Terang (Light Mode)</span>
+              <span className="text-[10px] font-mono text-slate-500">Clean &amp; High-Contrast</span>
+            </div>
+            <div className="space-y-2 font-mono text-[11px]">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600">Canvas Root:</span>
+                <span className="text-slate-900 font-bold bg-white px-2 py-0.5 rounded border border-slate-300">#F8FAFC (Slate-50)</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600">Sidebar Rail:</span>
+                <span className="text-slate-900 font-bold bg-white px-2 py-0.5 rounded border border-slate-300">#F8FAFC</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600">Navbar &amp; Top Header:</span>
+                <span className="text-slate-900 font-bold bg-white px-2 py-0.5 rounded border border-slate-300">#FFFFFF (95% blur)</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600">Columns &amp; Containers:</span>
+                <span className="text-slate-900 font-bold bg-slate-100 px-2 py-0.5 rounded border border-slate-300">#F1F5F9 (Slate-100)</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600">Surface Cards &amp; Modals:</span>
+                <span className="text-slate-900 font-bold bg-white px-2 py-0.5 rounded border border-slate-300">#FFFFFF (Pure White)</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600">Borders (Default):</span>
+                <span className="text-slate-800 font-bold">#E2E8F0 (border-slate-200)</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600">Borders (Inputs/Forms):</span>
+                <span className="text-slate-800 font-bold">#CBD5E1 (border-slate-300)</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600">Text Primer / Headings:</span>
+                <span className="text-slate-900 font-bold">#0F172A (text-slate-900)</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600">Text Sekunder / Muted:</span>
+                <span className="text-slate-600 font-bold">#475569 / #94A3B8</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3.3 Status Workflow & Roles */}
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5">
+            B. Warna Aksen Workflow &amp; Hak Akses
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
+            <div className={`p-2.5 rounded-xl border flex items-center gap-2 ${isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+              <span className="w-3 h-3 rounded-full bg-slate-400 shrink-0 swatch-box" />
+              <div className="min-w-0">
+                <div className="font-bold text-[11px] truncate">New Idea</div>
+                <div className="text-[10px] font-mono text-slate-400">#94A3B8</div>
+              </div>
+            </div>
+
+            <div className={`p-2.5 rounded-xl border flex items-center gap-2 ${isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+              <span className="w-3 h-3 rounded-full bg-amber-400 shrink-0 swatch-box" />
+              <div className="min-w-0">
+                <div className="font-bold text-[11px] truncate">On Progress</div>
+                <div className="text-[10px] font-mono text-amber-400">#FBBF24</div>
+              </div>
+            </div>
+
+            <div className={`p-2.5 rounded-xl border flex items-center gap-2 ${isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+              <span className="w-3 h-3 rounded-full bg-blue-400 shrink-0 swatch-box" />
+              <div className="min-w-0">
+                <div className="font-bold text-[11px] truncate">Req Approval</div>
+                <div className="text-[10px] font-mono text-blue-400">#60A5FA</div>
+              </div>
+            </div>
+
+            <div className={`p-2.5 rounded-xl border flex items-center gap-2 ${isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+              <span className="w-3 h-3 rounded-full bg-emerald-400 shrink-0 swatch-box" />
+              <div className="min-w-0">
+                <div className="font-bold text-[11px] truncate">Approved / RtP</div>
+                <div className="text-[10px] font-mono text-emerald-400">#34D399</div>
+              </div>
+            </div>
+
+            <div className={`p-2.5 rounded-xl border flex items-center gap-2 ${isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+              <span className="w-3 h-3 rounded-full bg-teal-400 shrink-0 swatch-box" />
+              <div className="min-w-0">
+                <div className="font-bold text-[11px] truncate">Scheduling</div>
+                <div className="text-[10px] font-mono text-teal-400">#2DD4BF</div>
+              </div>
+            </div>
+
+            <div className={`p-2.5 rounded-xl border flex items-center gap-2 ${isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+              <span className="w-3 h-3 rounded-full bg-indigo-400 shrink-0 swatch-box" />
+              <div className="min-w-0">
+                <div className="font-bold text-[11px] truncate">Published</div>
+                <div className="text-[10px] font-mono text-indigo-400">#818CF8</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Chapter 4: Modul Fitur Utama */}
+      <section className={`${isDarkMode ? 'bg-[#1e293b]/70 border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-5 sm:p-6 transition-colors print-card print-non-palette`}>
         <div className="flex items-center gap-2 mb-3">
           <Workflow className="w-5 h-5 text-emerald-500" />
           <h2 className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-            3. Rincian Modul &amp; Fitur Aplikasi
+            4. Rincian Modul &amp; Fitur Aplikasi
           </h2>
         </div>
 
@@ -327,12 +629,12 @@ Menangani siklus produksi konten, kalender editorial, presensi tim geolokasi, pa
         </div>
       </section>
 
-      {/* Chapter 4: Matriks Peran & Hak Akses (RBAC) */}
-      <section className={`${isDarkMode ? 'bg-[#1e293b]/70 border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-5 sm:p-6 transition-colors print-card`}>
+      {/* Chapter 5: Matriks Peran & Hak Akses (RBAC) */}
+      <section className={`${isDarkMode ? 'bg-[#1e293b]/70 border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-5 sm:p-6 transition-colors print-card print-non-palette`}>
         <div className="flex items-center gap-2 mb-3">
           <ShieldCheck className="w-5 h-5 text-red-500" />
           <h2 className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-            4. Matriks Peran &amp; Hak Akses (RBAC)
+            5. Matriks Peran &amp; Hak Akses (RBAC)
           </h2>
         </div>
 
@@ -402,12 +704,12 @@ Menangani siklus produksi konten, kalender editorial, presensi tim geolokasi, pa
         </div>
       </section>
 
-      {/* Chapter 5: Deployment Vercel & Troubleshooting */}
-      <section className={`${isDarkMode ? 'bg-[#1e293b]/70 border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-5 sm:p-6 transition-colors print-card`}>
+      {/* Chapter 6: Deployment Vercel & Troubleshooting */}
+      <section className={`${isDarkMode ? 'bg-[#1e293b]/70 border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-5 sm:p-6 transition-colors print-card print-non-palette`}>
         <div className="flex items-center gap-2 mb-3">
           <GitBranch className="w-5 h-5 text-amber-500" />
           <h2 className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-            5. Panduan Deployment Vercel &amp; Troubleshooting
+            6. Panduan Deployment Vercel &amp; Troubleshooting
           </h2>
         </div>
 
@@ -450,16 +752,26 @@ Menangani siklus produksi konten, kalender editorial, presensi tim geolokasi, pa
         </div>
       </section>
 
-      {/* Chapter 6: Changelog Pembaruan Fitur */}
-      <section className={`${isDarkMode ? 'bg-[#1e293b]/70 border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-5 sm:p-6 transition-colors print-card`}>
+      {/* Chapter 7: Changelog Pembaruan Fitur */}
+      <section className={`${isDarkMode ? 'bg-[#1e293b]/70 border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-5 sm:p-6 transition-colors print-card print-non-palette`}>
         <div className="flex items-center gap-2 mb-3">
           <Sparkles className="w-5 h-5 text-teal-400" />
           <h2 className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-            6. Log Pembaruan Fitur (Changelog)
+            7. Log Pembaruan Fitur (Changelog)
           </h2>
         </div>
 
         <div className="space-y-3 text-xs">
+          <div className={`p-3.5 rounded-xl border ${isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-bold text-amber-400">v2.4.1 — Identitas &amp; Palet Warna Resmi (Design Tokens PDF)</span>
+              <span className="font-mono text-slate-500 text-[10px]">Oktober 2026</span>
+            </div>
+            <p className="text-slate-400 leading-relaxed">
+              Integrasi dokumen spesifikasi warna lengkap Mode Terang, Mode Gelap, alur status Kanban, dan hak akses dengan fitur cetak PDF khusus palet warna.
+            </p>
+          </div>
+
           <div className={`p-3.5 rounded-xl border ${isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
             <div className="flex items-center justify-between mb-1">
               <span className="font-bold text-emerald-400">v2.4.0 — Developer PDF Manual &amp; Living Documentation</span>

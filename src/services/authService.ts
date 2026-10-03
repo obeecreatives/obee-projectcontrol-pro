@@ -483,6 +483,41 @@ class AuthService {
     return { success: true, newPassword: finalPassword };
   }
 
+  // Update staff role directly from Role Access Settings
+  updateUserRole(
+    email: string,
+    newRole: UserRole,
+    actorEmail: string = 'Admin'
+  ): { success: boolean; error?: string } {
+    const cleanEmail = email.toLowerCase().trim();
+    const list = this.getDirectory();
+    const target = list.find((u) => u.email.toLowerCase() === cleanEmail);
+    if (!target) {
+      return { success: false, error: 'User tidak ditemukan di direktori staf.' };
+    }
+
+    const oldRole = target.role;
+    target.role = newRole;
+    target.isAdmin = ['project_manager', 'web_developer', 'admin', 'site_engineer'].includes(newRole);
+
+    this.setDirectory(list);
+
+    // If current logged in user is this person, update currentUser session
+    const cur = this.getCurrentUser();
+    if (cur && cur.email.toLowerCase() === cleanEmail) {
+      this.setCurrentUser(target);
+    }
+
+    this.addSecurityLog({
+      action: 'ROLE_UPDATE',
+      actorEmail,
+      targetEmail: cleanEmail,
+      details: `Mengubah hak akses peran dari "${oldRole}" menjadi "${newRole}"`,
+    });
+
+    return { success: true };
+  }
+
   // Register user into whitelist with automatic default password
   registerWhitelistUser(
     newStaff: StaffUser,

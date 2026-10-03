@@ -41,6 +41,7 @@ import {
   Lock,
   RefreshCw,
   BookOpen,
+  Sliders,
 } from 'lucide-react';
 
 interface Toast {
@@ -583,8 +584,8 @@ export default function App() {
                   }}
                   className={`flex items-center gap-2 p-3 ${isDarkMode ? 'bg-slate-900 border-slate-800 hover:bg-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-800'} border rounded-xl text-left font-semibold cursor-pointer`}
                 >
-                  <ShieldCheck className="w-4 h-4 text-red-500" />
-                  <span>Pengaturan Akses</span>
+                  <Sliders className="w-4 h-4 text-red-500" />
+                  <span>Pengaturan Peran</span>
                 </button>
               )}
 

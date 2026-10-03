@@ -171,7 +171,7 @@ export interface RoleConfig {
 export interface SecurityLogItem {
   id: string;
   timestamp: string;
-  action: 'WHITELIST_ADD' | 'WHITELIST_REMOVE' | 'PASSWORD_CHANGE' | 'PASSWORD_RESET' | 'DEFAULT_PASSWORD_UPDATE';
+  action: 'WHITELIST_ADD' | 'WHITELIST_REMOVE' | 'PASSWORD_CHANGE' | 'PASSWORD_RESET' | 'DEFAULT_PASSWORD_UPDATE' | 'ROLE_UPDATE';
   actorEmail: string;
   targetEmail?: string;
   details: string;
