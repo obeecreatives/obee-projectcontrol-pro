@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { ContentItem, UserRole, StatusType, StaffUser } from '../types';
 import { ROLES } from '../data/seedData';
+import { formatDateIndo } from '../utils/dateFormatter';
 import {
   ExternalLink,
   FolderOpen,
@@ -205,7 +206,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       <div className={`flex items-center justify-between text-xs pt-1 border-t ${isDarkMode ? 'text-slate-400 border-slate-700/60' : 'text-slate-500 border-slate-200'}`}>
         <div className="flex items-center gap-1 text-[11px]">
           <Calendar className="w-3 h-3 text-slate-400" />
-          <span>{item.JadwalPosting || 'Belum ada jadwal'}</span>
+          <span>{item.JadwalPosting ? formatDateIndo(item.JadwalPosting) : 'Belum ada jadwal'}</span>
         </div>
         {roleConfig.showInternalFee && (
           <span
