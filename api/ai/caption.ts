@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { generateAiText, setCorsHeaders } from '../_lib/gemini.js';
+import { generateAiText, setCorsHeaders } from '../_lib/gemini';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   setCorsHeaders(res);
