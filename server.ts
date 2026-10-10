@@ -131,6 +131,18 @@ Tolong rangkum menjadi daftar tindakan (Action Items / Checklist Revisi) yang je
   }
 });
 
+// Health check endpoint
+app.get(['/api/health', '/api/ai/health'], (_req, res) => {
+  const hasApiKey = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim() !== '');
+  res.json({
+    status: 'ok',
+    message: 'obeecreatives API is running',
+    environment: isProduction ? 'production' : 'development',
+    geminiConfigured: hasApiKey,
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Vite middleware or static serving
 async function startServer() {
   if (isProduction) {

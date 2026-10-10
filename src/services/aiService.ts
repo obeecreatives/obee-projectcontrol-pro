@@ -25,8 +25,42 @@ export interface SummarizeRevisiParams {
   }>;
 }
 
+async function parseApiResponse(res: Response): Promise<any> {
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    try {
+      return await res.json();
+    } catch {
+      throw new Error('Respons dari server tidak dapat dibaca (format JSON terputus).');
+    }
+  }
+
+  const rawText = await res.text();
+  if (rawText.includes('<!DOCTYPE') || rawText.includes('<html') || rawText.includes('<head>')) {
+    throw new Error(
+      'Server Vercel belum mengenali fungsi API / Serverless Function. Pastikan kode terbaru di folder api/ sudah ter-push ke GitHub dan ter-deploy di Vercel.'
+    );
+  }
+
+  try {
+    return JSON.parse(rawText);
+  } catch {
+    throw new Error(rawText || 'Respons server kosong atau tidak valid.');
+  }
+}
+
 function cleanErrorMessage(rawError: any, fallback: string): string {
   if (!rawError) return fallback;
+  const msg = typeof rawError === 'string' ? rawError : rawError?.message || '';
+
+  if (msg.includes('GEMINI_API_KEY')) {
+    return 'GEMINI_API_KEY belum dipasang di Vercel. Buka Project Settings > Environment Variables di Vercel, lalu tambahkan GEMINI_API_KEY.';
+  }
+
+  if (msg.includes('Unexpected end of JSON') || msg.includes('Failed to execute \'json\'')) {
+    return 'Server Vercel belum merespons endpoint AI. Pastikan folder api/ sudah terdeploy dan Environment Variables GEMINI_API_KEY sudah aktif di Vercel.';
+  }
+
   if (typeof rawError === 'string') {
     try {
       const parsed = JSON.parse(rawError);
@@ -37,12 +71,12 @@ function cleanErrorMessage(rawError: any, fallback: string): string {
         return parsed.error.message;
       }
     } catch {
-      return rawError;
+      // not JSON string
     }
     return rawError;
   }
-  if (rawError?.message) return rawError.message;
-  return fallback;
+
+  return msg || fallback;
 }
 
 export const aiService = {
@@ -54,7 +88,7 @@ export const aiService = {
         body: JSON.stringify(params),
       });
 
-      const data = await res.json();
+      const data = await parseApiResponse(res);
       if (!res.ok || !data.success) {
         throw new Error(cleanErrorMessage(data?.error, 'Gagal menghasilkan caption'));
       }
@@ -72,7 +106,7 @@ export const aiService = {
         body: JSON.stringify(params),
       });
 
-      const data = await res.json();
+      const data = await parseApiResponse(res);
       if (!res.ok || !data.success) {
         throw new Error(cleanErrorMessage(data?.error, 'Gagal menghasilkan ide konten'));
       }
@@ -90,7 +124,7 @@ export const aiService = {
         body: JSON.stringify(params),
       });
 
-      const data = await res.json();
+      const data = await parseApiResponse(res);
       if (!res.ok || !data.success) {
         throw new Error(cleanErrorMessage(data?.error, 'Gagal merangkum revisi'));
       }
