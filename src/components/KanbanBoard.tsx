@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { ContentItem, UserRole, StatusType, TipeProjectType, StaffUser } from '../types';
 import { normalizeClientName, normalizeCreatorName } from '../data/seedData';
 import { storageService } from '../services/storageService';
+import { KanbanSyncState } from '../services/kanbanSyncService';
 import { ContentCard } from './ContentCard';
 import {
   Search,
@@ -13,6 +14,10 @@ import {
   ChevronRight,
   LayoutGrid,
   Columns,
+  RefreshCw,
+  CheckCircle2,
+  Cloud,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 interface KanbanBoardProps {
@@ -26,6 +31,9 @@ interface KanbanBoardProps {
   onOpenNewContentModal: () => void;
   isDarkMode?: boolean;
   currentUser?: StaffUser | null;
+  kanbanSyncState?: KanbanSyncState;
+  onTriggerSync?: () => void;
+  onOpenSyncModal?: () => void;
 }
 
 const COLUMNS: { id: StatusType; label: string; color: string; dotColor: string }[] = [
@@ -48,6 +56,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onOpenNewContentModal,
   isDarkMode = true,
   currentUser,
+  kanbanSyncState,
+  onTriggerSync,
+  onOpenSyncModal,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedKlien, setSelectedKlien] = useState<string>('ALL');
@@ -188,6 +199,55 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           </div>
 
           <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+            {/* 2-Way Live Sync Indicator & Quick Trigger */}
+            {kanbanSyncState && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  onClick={onTriggerSync}
+                  disabled={kanbanSyncState.status === 'syncing'}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                    kanbanSyncState.status === 'syncing'
+                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                      : kanbanSyncState.status === 'error'
+                      ? 'bg-red-500/10 text-red-400 border-red-500/30'
+                      : kanbanSyncState.pendingCount > 0
+                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                      : isDarkMode
+                      ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/50 hover:bg-emerald-900/40'
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                  }`}
+                  title={`${kanbanSyncState.message || 'Sinkronisasi 2-Arah Spreadsheet'} (Klik untuk sinkronkan sekarang)`}
+                >
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 ${
+                      kanbanSyncState.status === 'syncing' ? 'animate-spin text-amber-400' : 'text-emerald-400'
+                    }`}
+                  />
+                  <span className="hidden md:inline">
+                    {kanbanSyncState.status === 'syncing'
+                      ? 'Menyinkronkan...'
+                      : kanbanSyncState.pendingCount > 0
+                      ? `${kanbanSyncState.pendingCount} Antrean`
+                      : '2-Way Live Sync'}
+                  </span>
+                  <span className="md:hidden text-[11px]">2-Way Sync</span>
+                </button>
+                {onOpenSyncModal && (
+                  <button
+                    onClick={onOpenSyncModal}
+                    className={`p-1.5 rounded-xl border text-xs transition-colors cursor-pointer ${
+                      isDarkMode
+                        ? 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
+                        : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                    }`}
+                    title="Pengaturan Sync Spreadsheet & Skrip GAS"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-red-400" />
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* View Mode Toggle: Fit 6 Kolom vs Mode Scroll */}
             <div className={`flex items-center ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-100 border-slate-200'} border rounded-xl p-0.5 shrink-0`}>
               <button

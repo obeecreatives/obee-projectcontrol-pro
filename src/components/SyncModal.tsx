@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { liveSyncService } from '../services/liveSyncService';
 import { storageService } from '../services/storageService';
 import { authService } from '../services/authService';
+import { kanbanSyncService } from '../services/kanbanSyncService';
 import {
   RefreshCw,
   X,
@@ -16,6 +17,10 @@ import {
   Sparkles,
   Info,
   Check,
+  Kanban,
+  Send,
+  Copy,
+  Zap,
 } from 'lucide-react';
 
 interface SyncModalProps {
@@ -33,12 +38,22 @@ export const SyncModal: React.FC<SyncModalProps> = ({
 }) => {
   const [crmUrl, setCrmUrl] = useState(() => liveSyncService.getCrmGasUrl());
   const [staffUrl, setStaffUrl] = useState(() => liveSyncService.getStaffGasUrl());
+  const [kanbanUrl, setKanbanUrl] = useState(() => kanbanSyncService.getGasUrl());
 
   const [isSyncingCrm, setIsSyncingCrm] = useState(false);
   const [crmStatus, setCrmStatus] = useState<{ ok: boolean; message: string } | null>(null);
 
   const [isSyncingStaff, setIsSyncingStaff] = useState(false);
   const [staffStatus, setStaffStatus] = useState<{ ok: boolean; message: string } | null>(null);
+
+  const [isSyncingCards, setIsSyncingCards] = useState(false);
+  const [cardStatus, setCardStatus] = useState<{ ok: boolean; message: string } | null>(null);
+
+  const [isPushingCards, setIsPushingCards] = useState(false);
+  const [pushStatus, setPushStatus] = useState<{ ok: boolean; message: string } | null>(null);
+
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(() => kanbanSyncService.getAutoSyncEnabled());
+  const [copiedKanbanScript, setCopiedKanbanScript] = useState(false);
 
   const [isSyncingAll, setIsSyncingAll] = useState(false);
   const [allStatus, setAllStatus] = useState<{ ok: boolean; message: string } | null>(null);
@@ -47,11 +62,70 @@ export const SyncModal: React.FC<SyncModalProps> = ({
 
   const currentCrmClients = storageService.getCrmClients();
   const currentStaff = authService.getDirectory();
+  const currentCards = storageService.getContent();
   const lastSyncTime = liveSyncService.getLastSyncTime();
+  const lastCardSync = kanbanSyncService.getLastSyncTime();
 
   const handleSaveUrls = () => {
     liveSyncService.setCrmGasUrl(crmUrl);
     liveSyncService.setStaffGasUrl(staffUrl);
+    kanbanSyncService.setGasUrl(kanbanUrl);
+  };
+
+  const handleSyncKanbanCards = async () => {
+    handleSaveUrls();
+    setIsSyncingCards(true);
+    setCardStatus(null);
+    try {
+      const res = await kanbanSyncService.pullCardsFromSpreadsheet();
+      if (res.success) {
+        setCardStatus({
+          ok: true,
+          message: `Berhasil! ${res.added} kartu baru ditambahkan, ${res.updated} diperbarui. Total: ${res.total} kartu aktif.`,
+        });
+        if (onSyncComplete) onSyncComplete('Seluruh kartu Kanban berhasil disinkronkan!');
+      } else {
+        setCardStatus({
+          ok: false,
+          message: res.error || 'Gagal menarik data kartu dari Spreadsheet.',
+        });
+      }
+    } catch (err: any) {
+      setCardStatus({ ok: false, message: err?.message || 'Gagal sinkronisasi kartu' });
+    } finally {
+      setIsSyncingCards(false);
+    }
+  };
+
+  const handlePushAllCards = async () => {
+    handleSaveUrls();
+    setIsPushingCards(true);
+    setPushStatus(null);
+    try {
+      const res = await kanbanSyncService.pushAllCardsToSpreadsheet(storageService.getContent());
+      if (res.success) {
+        setPushStatus({
+          ok: true,
+          message: `Sukses! Seluruh ${res.count} kartu Kanban berhasil dikirim & diperbarui di baris Spreadsheet.`,
+        });
+        if (onSyncComplete) onSyncComplete('Seluruh kartu Kanban berhasil dikirim ke Spreadsheet!');
+      } else {
+        setPushStatus({
+          ok: false,
+          message: res.message || 'Gagal push kartu ke Spreadsheet.',
+        });
+      }
+    } catch (err: any) {
+      setPushStatus({ ok: false, message: err?.message || 'Gagal push kartu' });
+    } finally {
+      setIsPushingCards(false);
+    }
+  };
+
+  const handleToggleAutoSync = () => {
+    const nextVal = !autoSyncEnabled;
+    setAutoSyncEnabled(nextVal);
+    kanbanSyncService.setAutoSyncEnabled(nextVal);
   };
 
   const handleSyncCrm = async () => {
@@ -355,6 +429,134 @@ export const SyncModal: React.FC<SyncModalProps> = ({
                 {staffStatus.ok ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
                 <span>{staffStatus.message}</span>
               </div>
+            )}
+          </div>
+
+          {/* Section 3: Spreadsheet Kartu Kanban (Full Otomatis 2-Arah) */}
+          <div
+            className={`p-4 rounded-xl border space-y-3.5 ${
+              isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Kanban className="w-4 h-4 text-emerald-500" />
+                <span className="font-bold text-sm">3. Spreadsheet Seluruh Kartu Kanban</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold uppercase tracking-wider">
+                  2-Arah Real-Time
+                </span>
+              </div>
+              <span className="text-xs px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 font-mono font-bold">
+                {currentCards.length} Kartu Aktif
+              </span>
+            </div>
+
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Setiap kali kartu digeser (drag & drop status), diedit, dibuat baru, atau dicentang checklist-nya, data langsung terkirim dan terupdate di spreadsheet secara otomatis.
+            </p>
+
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                Link URL Web App GAS Kartu Kanban
+              </label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Link2 className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    value={kanbanUrl}
+                    onChange={(e) => setKanbanUrl(e.target.value)}
+                    placeholder="https://script.google.com/macros/s/.../exec"
+                    className={`w-full pl-9 pr-3 py-2 text-xs rounded-xl border focus:outline-none focus:border-emerald-500 font-mono ${
+                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                    }`}
+                  />
+                </div>
+                <button
+                  onClick={handleSyncKanbanCards}
+                  disabled={isSyncingCards}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 shadow-lg shadow-emerald-600/20 cursor-pointer disabled:opacity-50"
+                  title="Tarik data terbaru dari Spreadsheet ke Kanban"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncingCards ? 'animate-spin' : ''}`} />
+                  <span>{isSyncingCards ? 'Menarik...' : 'Tarik Kartu'}</span>
+                </button>
+                <button
+                  onClick={handlePushAllCards}
+                  disabled={isPushingCards}
+                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
+                  title="Kirim seluruh kartu yang ada ke Spreadsheet"
+                >
+                  <Send className={`w-3.5 h-3.5 ${isPushingCards ? 'animate-pulse' : ''}`} />
+                  <span>{isPushingCards ? 'Mengirim...' : 'Push Seluruh Kartu'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Auto-Sync Toggle & GAS Script Copy */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-800/60 text-xs">
+              <label className="flex items-center gap-2 cursor-pointer text-slate-300 select-none">
+                <input
+                  type="checkbox"
+                  checked={autoSyncEnabled}
+                  onChange={handleToggleAutoSync}
+                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 rounded border-slate-700"
+                />
+                <span className="font-semibold text-[11px] flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  Auto-Sync Otomatis di Background (Tiap 45 detik)
+                </span>
+              </label>
+
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(kanbanSyncService.generateFullTwoWayGasScript());
+                  setCopiedKanbanScript(true);
+                  setTimeout(() => setCopiedKanbanScript(false), 2500);
+                }}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-colors cursor-pointer ${
+                  isDarkMode
+                    ? 'bg-slate-800/80 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700'
+                    : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                {copiedKanbanScript ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedKanbanScript ? 'Skrip 2-Arah Tersalin!' : 'Salin Skrip GAS 2-Arah v3.0'}</span>
+              </button>
+            </div>
+
+            {/* Kanban Status Feedback */}
+            {cardStatus && (
+              <div
+                className={`p-2.5 rounded-lg border text-xs flex items-center gap-2 ${
+                  cardStatus.ok
+                    ? 'bg-emerald-950/50 border-emerald-800 text-emerald-300'
+                    : 'bg-red-950/50 border-red-800 text-red-300'
+                }`}
+              >
+                {cardStatus.ok ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+                <span>{cardStatus.message}</span>
+              </div>
+            )}
+
+            {pushStatus && (
+              <div
+                className={`p-2.5 rounded-lg border text-xs flex items-center gap-2 ${
+                  pushStatus.ok
+                    ? 'bg-emerald-950/50 border-emerald-800 text-emerald-300'
+                    : 'bg-red-950/50 border-red-800 text-red-300'
+                }`}
+              >
+                {pushStatus.ok ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+                <span>{pushStatus.message}</span>
+              </div>
+            )}
+
+            {lastCardSync && (
+              <p className="text-[10px] text-slate-500 font-mono">
+                Sinkronisasi kartu terakhir: {new Date(lastCardSync).toLocaleString('id-ID')}
+              </p>
             )}
           </div>
 

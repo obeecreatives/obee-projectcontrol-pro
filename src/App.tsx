@@ -3,6 +3,7 @@ import { ViewTab, ContentItem, UserRole, StatusType, RateCardItem, GeneralLink, 
 import { storageService } from './services/storageService';
 import { authService } from './services/authService';
 import { liveSyncService } from './services/liveSyncService';
+import { kanbanSyncService, KanbanSyncState } from './services/kanbanSyncService';
 import { geoService } from './services/geoService';
 import { LoginScreen } from './components/LoginScreen';
 import { Navbar } from './components/Navbar';
@@ -130,14 +131,66 @@ export default function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Content Operations (Optimistic UI 0.01s)
+  // 2-Way Real-Time Kanban Sync State & Polling
+  const [kanbanSyncState, setKanbanSyncState] = useState<KanbanSyncState>(() =>
+    kanbanSyncService.getState()
+  );
+
+  useEffect(() => {
+    const unsubscribe = kanbanSyncService.subscribe((state) => {
+      setKanbanSyncState(state);
+    });
+
+    // Start background auto-sync polling
+    kanbanSyncService.startAutoSyncPolling((updatedCards) => {
+      setItems(updatedCards);
+      addToast('Data kartu Kanban terupdate otomatis dari Spreadsheet', 'info');
+    });
+
+    return () => {
+      unsubscribe();
+      kanbanSyncService.stopAutoSyncPolling();
+    };
+  }, []);
+
+  const handleTriggerTwoWaySync = async () => {
+    addToast('Menyinkronkan seluruh kartu Kanban dengan Spreadsheet...', 'info');
+    const res = await kanbanSyncService.pullCardsFromSpreadsheet();
+    if (res.success) {
+      setItems(storageService.getContent());
+      setRates(storageService.getRateCards());
+      setActivityLogs(storageService.getActivityLogs());
+      addToast(`2-Way Sync selesai: ${res.added} kartu baru, ${res.updated} diperbarui!`, 'success');
+    } else {
+      addToast(res.error || 'Gagal sinkronisasi 2-arah', 'error');
+    }
+  };
+
+  const handlePushAllCardsToSpreadsheet = async () => {
+    const allCards = storageService.getContent();
+    addToast(`Mengirim ${allCards.length} kartu ke Spreadsheet...`, 'info');
+    const res = await kanbanSyncService.pushAllCardsToSpreadsheet(allCards);
+    if (res.success) {
+      addToast(`Seluruh ${res.count} kartu berhasil dipush ke Spreadsheet!`, 'success');
+    } else {
+      addToast(res.message || 'Gagal push kartu', 'error');
+    }
+  };
+
+  // Content Operations (Optimistic UI 0.01s + Full 2-Way Push to Spreadsheet)
   const handleSaveContent = (itemData: Partial<ContentItem>) => {
     const res = storageService.saveContentItem(itemData);
     if (res.success) {
-      setItems(storageService.getContent());
+      const allCards = storageService.getContent();
+      setItems(allCards);
       setActivityLogs(storageService.getActivityLogs());
+      
+      // Automatic 2-Way Push to Spreadsheet
+      const savedCard = allCards.find((c) => c.ID === res.id) || (itemData as ContentItem);
+      kanbanSyncService.queueCardUpsert(savedCard);
+
       addToast(
-        itemData.ID ? 'Konten berhasil diperbarui' : 'Konten baru berhasil ditambahkan',
+        itemData.ID ? 'Konten diperbarui & otomatis tersinkron ke Spreadsheet' : 'Konten baru ditambahkan & tersinkron ke Spreadsheet',
         'success'
       );
     }
@@ -146,9 +199,15 @@ export default function App() {
   const handleStatusChange = (id: string, newStatus: StatusType) => {
     const res = storageService.updateContentStatus(id, newStatus, activeRole, currentUser?.email);
     if (res.success) {
-      setItems(storageService.getContent());
+      const allCards = storageService.getContent();
+      setItems(allCards);
       setActivityLogs(storageService.getActivityLogs());
-      addToast(`Status diubah ke "${newStatus}"`, 'success');
+
+      // Automatic 2-Way Push to Spreadsheet (Drag & Drop or status selector)
+      const changedCard = allCards.find((c) => c.ID === id);
+      kanbanSyncService.queueStatusChange(id, newStatus, changedCard);
+
+      addToast(`Status diubah ke "${newStatus}" & otomatis tersinkron ke Spreadsheet`, 'success');
     } else {
       addToast(res.error || 'Gagal mengubah status', 'error');
     }
@@ -160,7 +219,14 @@ export default function App() {
     value: boolean
   ) => {
     storageService.updateChecklist(id, field, value);
-    setItems(storageService.getContent());
+    const allCards = storageService.getContent();
+    setItems(allCards);
+
+    // Automatic 2-Way Push to Spreadsheet
+    const card = allCards.find((c) => c.ID === id);
+    if (card) {
+      kanbanSyncService.queueCardUpsert(card);
+    }
   };
 
   const handleDeleteContent = (id: string) => {
@@ -169,7 +235,11 @@ export default function App() {
       if (res.success) {
         setItems(storageService.getContent());
         setActivityLogs(storageService.getActivityLogs());
-        addToast('Konten berhasil dihapus', 'info');
+
+        // Automatic 2-Way Push to Spreadsheet
+        kanbanSyncService.queueCardDelete(id);
+
+        addToast('Konten berhasil dihapus & tersinkron ke Spreadsheet', 'info');
       } else {
         addToast(res.error || 'Gagal menghapus konten', 'error');
       }
@@ -393,6 +463,9 @@ export default function App() {
               onOpenNewContentModal={handleOpenNewContentModal}
               isDarkMode={isDarkMode}
               currentUser={currentUser}
+              kanbanSyncState={kanbanSyncState}
+              onTriggerSync={handleTriggerTwoWaySync}
+              onOpenSyncModal={() => setIsSyncModalOpen(true)}
             />
           )}
 

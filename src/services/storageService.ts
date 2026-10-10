@@ -19,7 +19,7 @@ export const DEFAULT_KPI_TARGETS: KpiTargets = {
   onTimeGoalPercent: 85,
 };
 
-export const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbz_obeecreatives_project_control_v2/exec';
+export const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzLzc0-TiWtK2KCB3hBGP6nbUbdMTGYNpQg_s8eHfwPTxIUjV7t6XVaw0yR1mf7jATP/exec';
 
 class StorageService {
   getContent(): ContentItem[] {

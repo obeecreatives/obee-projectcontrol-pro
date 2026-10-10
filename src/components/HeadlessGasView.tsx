@@ -3,6 +3,7 @@ import { GasApiService } from '../services/gasApiService';
 import { storageService } from '../services/storageService';
 import { liveSyncService } from '../services/liveSyncService';
 import { authService } from '../services/authService';
+import { kanbanSyncService } from '../services/kanbanSyncService';
 import { parseSpreadsheetCsv } from '../data/seedData';
 import {
   Cpu,
@@ -25,6 +26,7 @@ import {
   ArrowRight,
   Code,
   UploadCloud,
+  Send,
 } from 'lucide-react';
 
 interface HeadlessGasViewProps {
@@ -67,13 +69,16 @@ export const HeadlessGasView: React.FC<HeadlessGasViewProps> = ({
   const [copiedStaffCode, setCopiedStaffCode] = useState(false);
 
   // Content Tracker State
-  const [contentGasUrl, setContentGasUrl] = useState(gasUrl);
-  const [spreadsheetId, setSpreadsheetId] = useState('1el1tK4NGhoslMWECWzIo-7nBAEox6KZ-2TjlJ6WLIV8');
+  const [contentGasUrl, setContentGasUrl] = useState(() => storageService.getGasUrl());
+  const [contentSyncFeedback, setContentSyncFeedback] = useState<string | null>(null);
+  const [spreadsheetId, setSpreadsheetId] = useState('1wdsy4L0NbPOR39dYjnOM8Og_Os10piz9VT5DBglb0qQ');
   const [testContentResult, setTestContentResult] = useState<{ ok: boolean; message: string; latencyMs: number } | null>(null);
   const [isTestingContent, setIsTestingContent] = useState(false);
   const [isSyncingContent, setIsSyncingContent] = useState(false);
   const [syncContentResult, setSyncContentResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [isCopiedContentCode, setIsCopiedContentCode] = useState(false);
+  const [isPushingCards, setIsPushingCards] = useState(false);
+  const [pushCardResult, setPushCardResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   // Data Counters
   const crmClients = storageService.getCrmClients();
@@ -220,6 +225,18 @@ export const HeadlessGasView: React.FC<HeadlessGasViewProps> = ({
   };
 
   // Content Tracker Actions
+  const handleSaveContentUrl = () => {
+    let clean = (contentGasUrl || '').trim();
+    while (clean.endsWith('/')) clean = clean.slice(0, -1);
+    if (clean.includes('/macros/s/') && !clean.endsWith('/exec') && !clean.endsWith('/dev')) clean += '/exec';
+    setContentGasUrl(clean);
+    storageService.setGasUrl(clean);
+    kanbanSyncService.setGasUrl(clean);
+    onUpdateGasUrl(clean);
+    setContentSyncFeedback('URL Web App GAS Kartu Kanban berhasil disimpan ke memori!');
+    setTimeout(() => setContentSyncFeedback(null), 3000);
+  };
+
   const handleTestContentConnection = async () => {
     let clean = (contentGasUrl || '').trim();
     while (clean.endsWith('/')) clean = clean.slice(0, -1);
@@ -251,9 +268,13 @@ export const HeadlessGasView: React.FC<HeadlessGasViewProps> = ({
     setIsSyncingContent(true);
     setSyncContentResult(null);
 
-    const sId = spreadsheetId.trim() || '1el1tK4NGhoslMWECWzIo-7nBAEox6KZ-2TjlJ6WLIV8';
+    const sId = spreadsheetId.trim() || '1wdsy4L0NbPOR39dYjnOM8Og_Os10piz9VT5DBglb0qQ';
 
     try {
+      storageService.setGasUrl(cleanUrl);
+      kanbanSyncService.setGasUrl(cleanUrl);
+      onUpdateGasUrl(cleanUrl);
+
       let res = await GasApiService.fetchContentFromGas(cleanUrl, sId);
       if (res && res.ok && res.data) {
         storageService.saveContent(res.data);
@@ -278,6 +299,21 @@ export const HeadlessGasView: React.FC<HeadlessGasViewProps> = ({
       });
     } finally {
       setIsSyncingContent(false);
+    }
+  };
+
+  const handlePushAllCards = async () => {
+    setIsPushingCards(true);
+    setPushCardResult(null);
+    try {
+      const allCards = storageService.getContent();
+      const res = await kanbanSyncService.pushAllCardsToSpreadsheet(allCards);
+      setPushCardResult({ ok: res.success, message: res.message });
+      if (res.success && onSyncSuccess) onSyncSuccess(allCards.length);
+    } catch (err: any) {
+      setPushCardResult({ ok: false, message: err?.message || 'Gagal push kartu' });
+    } finally {
+      setIsPushingCards(false);
     }
   };
 
@@ -695,9 +731,14 @@ export const HeadlessGasView: React.FC<HeadlessGasViewProps> = ({
           <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'} shadow-lg space-y-4`}>
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-bold text-base">Skrip Google Apps Script Tracker Konten</h4>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-bold text-base">Skrip Google Apps Script 2-Way Kanban Sync</h4>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold uppercase tracking-wider">
+                    Full Otomatis 2-Arah
+                  </span>
+                </div>
                 <p className="text-xs text-slate-400 mt-1">
-                  Menghubungkan Kanban kartu konten dan tarif Rate Card ke spreadsheet utama.
+                  Sinkronisasi dua arah real-time untuk kartu Kanban (drag & drop status, tambah ide, edit detail, fee approval, & checklist).
                 </p>
               </div>
               <button
@@ -709,21 +750,37 @@ export const HeadlessGasView: React.FC<HeadlessGasViewProps> = ({
                 className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer shadow-md"
               >
                 {isCopiedContentCode ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{isCopiedContentCode ? 'Tersalin!' : 'Salin Skrip GAS Konten'}</span>
+                <span>{isCopiedContentCode ? 'Tersalin!' : 'Salin Skrip GAS 2-Arah'}</span>
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-              <input
-                type="url"
-                value={contentGasUrl}
-                onChange={(e) => setContentGasUrl(e.target.value)}
-                placeholder="https://script.google.com/macros/s/.../exec"
-                className={`p-2.5 text-xs font-mono rounded-xl border ${
-                  isDarkMode ? 'bg-slate-900 border-slate-700 text-slate-100' : 'bg-slate-50 border-slate-300 text-slate-900'
-                }`}
-              />
-              <div className="flex items-center gap-2">
+            <div className="space-y-2 pt-2">
+              <label className="text-[11px] font-bold text-slate-400 uppercase">URL Web App GAS Kartu Kanban:</label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={contentGasUrl}
+                  onChange={(e) => setContentGasUrl(e.target.value)}
+                  placeholder="https://script.google.com/macros/s/.../exec"
+                  className={`flex-1 px-3 py-2.5 text-xs font-mono rounded-xl border ${
+                    isDarkMode ? 'bg-slate-900 border-slate-700 text-slate-100' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
+                />
+                <button
+                  onClick={handleSaveContentUrl}
+                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl border border-slate-700 cursor-pointer shadow-sm transition-all"
+                >
+                  Simpan URL
+                </button>
+              </div>
+
+              {contentSyncFeedback && (
+                <div className="p-2.5 rounded-xl border text-xs bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                  {contentSyncFeedback}
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 pt-1">
                 <button
                   onClick={handleTestContentConnection}
                   disabled={isTestingContent}
@@ -734,9 +791,18 @@ export const HeadlessGasView: React.FC<HeadlessGasViewProps> = ({
                 <button
                   onClick={handleSyncContent}
                   disabled={isSyncingContent}
-                  className="flex-1 py-2.5 bg-[#E30000] hover:bg-[#c00000] text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
+                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  {isSyncingContent ? 'Menarik...' : 'Tarik Konten'}
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncingContent ? 'animate-spin' : ''}`} />
+                  <span>{isSyncingContent ? 'Menarik...' : 'Tarik Kartu'}</span>
+                </button>
+                <button
+                  onClick={handlePushAllCards}
+                  disabled={isPushingCards}
+                  className="flex-1 py-2.5 bg-[#E30000] hover:bg-[#c00000] text-white text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Send className={`w-3.5 h-3.5 ${isPushingCards ? 'animate-pulse' : ''}`} />
+                  <span>{isPushingCards ? 'Mengirim...' : 'Push Seluruh Kartu'}</span>
                 </button>
               </div>
             </div>
@@ -748,6 +814,33 @@ export const HeadlessGasView: React.FC<HeadlessGasViewProps> = ({
                 {testContentResult.message} (Latency: {testContentResult.latencyMs}ms)
               </div>
             )}
+
+            {syncContentResult && (
+              <div className={`p-3 rounded-xl border text-xs ${
+                syncContentResult.ok ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-red-500/10 text-red-400 border-red-500/30'
+              }`}>
+                {syncContentResult.message}
+              </div>
+            )}
+
+            {pushCardResult && (
+              <div className={`p-3 rounded-xl border text-xs ${
+                pushCardResult.ok ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-red-500/10 text-red-400 border-red-500/30'
+              }`}>
+                {pushCardResult.message}
+              </div>
+            )}
+
+            <div className="pt-2">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                Pratinjau Kode Google Apps Script:
+              </span>
+              <pre className={`p-4 rounded-2xl text-xs font-mono overflow-x-auto max-h-72 border ${
+                isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-slate-900 border-slate-800 text-slate-200'
+              }`}>
+                {GasApiService.getHeadlessGasTemplateCode()}
+              </pre>
+            </div>
           </div>
         </div>
       )}
