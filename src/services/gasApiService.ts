@@ -20,11 +20,11 @@ export class GasApiService {
     }
 
     const start = performance.now();
-    try {
-      const targetUrl = new URL(cleanUrl);
-      targetUrl.searchParams.set('action', 'ping');
-      if (sheetId) targetUrl.searchParams.set('sheet_id', sheetId);
+    const targetUrl = new URL(cleanUrl);
+    targetUrl.searchParams.set('action', 'ping');
+    if (sheetId) targetUrl.searchParams.set('sheet_id', sheetId);
 
+    try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 8000);
 
@@ -50,6 +50,23 @@ export class GasApiService {
         };
       }
     } catch (err: any) {
+      // Fallback via server-side /api/gas-proxy if browser CORS blocks script.google.com
+      try {
+        const proxyRes = await fetch('/api/gas-proxy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ targetUrl: targetUrl.toString(), method: 'GET' }),
+        });
+        const latencyMs = Math.round(performance.now() - start);
+        if (proxyRes.ok) {
+          return {
+            ok: true,
+            message: `Berhasil terhubung ke Google Apps Script via Gateway Proxy!`,
+            latencyMs,
+          };
+        }
+      } catch {}
+
       const latencyMs = Math.round(performance.now() - start);
       if (err.name === 'AbortError') {
         return { ok: false, message: 'Koneksi timeout setelah 8 detik.', latencyMs };
@@ -67,11 +84,11 @@ export class GasApiService {
     sheetId: string
   ): Promise<{ ok: boolean; data?: any[]; rateCards?: any[]; error?: string }> {
     const cleanUrl = this.normalizeGasUrl(gasUrl);
-    try {
-      const targetUrl = new URL(cleanUrl);
-      targetUrl.searchParams.set('action', 'get_content');
-      targetUrl.searchParams.set('sheet_id', sheetId);
+    const targetUrl = new URL(cleanUrl);
+    targetUrl.searchParams.set('action', 'get_content');
+    targetUrl.searchParams.set('sheet_id', sheetId);
 
+    try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 12000);
 
@@ -99,6 +116,26 @@ export class GasApiService {
 
       return { ok: false, error: 'Format data dari GAS bukan array baris konten.' };
     } catch (err: any) {
+      // Fallback via /api/gas-proxy
+      try {
+        const proxyResp = await fetch('/api/gas-proxy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ targetUrl: targetUrl.toString(), method: 'GET' }),
+        });
+        if (proxyResp.ok) {
+          const json = await proxyResp.json();
+          const content = json.data || json.content || json;
+          if (Array.isArray(content)) {
+            return {
+              ok: true,
+              data: content,
+              rateCards: json.rateCard || json.rateCards,
+            };
+          }
+        }
+      } catch {}
+
       return { ok: false, error: err?.message || 'Gagal memuat konten dari GAS.' };
     }
   }

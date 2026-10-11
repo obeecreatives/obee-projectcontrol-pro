@@ -1,31 +1,32 @@
 # Panduan Konfigurasi Vercel Serverless Function & Gemini AI
 
-Struktur Serverless Function Vercel (`api/`) dan file konfigurasi (`vercel.json`) telah selesai disiapkan.
+Arsitektur Serverless Function Vercel telah di-upgrade dengan **Unified API Gateway** (`api/index.ts`), router fallback ganda, dan **Google Apps Script Proxy** (`/api/gas-proxy`) untuk menjamin zero-CORS error di domain Vercel.
 
 ---
 
-## 📁 Struktur Folder yang Telah Dibuat
+## 📁 Struktur Folder & Gateway Terbaru
 ```
 ├── api/
+│   ├── index.ts                # Unified Vercel API Gateway (menangani /api/* secara terpusat)
 │   ├── _lib/
 │   │   └── gemini.ts           # Helper koneksi GoogleGenAI & auto-fallback model
 │   ├── ai/
 │   │   ├── caption.ts          # Endpoint POST /api/ai/caption
 │   │   ├── brainstorm.ts       # Endpoint POST /api/ai/brainstorm
 │   │   └── summarize-revisi.ts # Endpoint POST /api/ai/summarize-revisi
-│   └── health.ts               # Endpoint GET /api/health (untuk tes status fungsi)
-├── vercel.json                 # Konfigurasi routing Vercel Serverless & SPA
+│   └── health.ts               # Endpoint GET /api/health (status serverless & AI key)
+├── vercel.json                 # Routing Vercel: /api/(.*) -> api/index.ts & SPA rewrite
 ```
 
 ---
 
-## 🚀 3 Langkah Agar Fitur AI Berjalan di Vercel
+## 🚀 3 Langkah Agar Fitur Berjalan Sempurna di Vercel
 
 ### 1. Push Perubahan Terbaru ke GitHub
 Jalankan di terminal git Anda:
 ```bash
 git add .
-git commit -m "feat: tambahkan struktur Vercel serverless function api/ dan update vercel.json"
+git commit -m "fix: unified Vercel API gateway, gas-proxy fallback, and PWA api denylist"
 git push origin main
 ```
 
@@ -61,9 +62,10 @@ Jika berhasil, Anda akan melihat respons:
 ```json
 {
   "status": "ok",
-  "message": "obeecreatives Serverless API is running",
+  "message": "obeecreatives Vercel Serverless API Gateway is running",
   "environment": "vercel-serverless",
   "geminiConfigured": true
 }
 ```
-Jika `geminiConfigured: true`, maka tombol AI Action Items, Generate Caption, dan Brainstorming di aplikasi Anda sudah siap digunakan 100%!
+Jika `geminiConfigured: true`, maka tombol AI Action Items, Generate Caption, Brainstorming, dan sinkronisasi Spreadsheet di aplikasi Anda sudah siap digunakan 100%!
+

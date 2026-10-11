@@ -34,19 +34,21 @@ export function getAiClient(): GoogleGenAI {
 // Robust text generation with automatic fallback
 export async function generateAiText(prompt: string): Promise<string> {
   const ai = getAiClient();
+  const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash'];
+  let lastError: any = null;
 
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.1-flash-lite',
-      contents: prompt,
-    });
-    return response.text || '';
-  } catch (err: any) {
-    console.warn('Fallback ke gemini-3.8-flash:', err?.message);
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: prompt,
-    });
-    return response.text || '';
+  for (const model of candidateModels) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+      });
+      if (response.text) return response.text;
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`Fallback dari ${model}:`, err?.message || err);
+    }
   }
+
+  throw lastError || new Error('Gagal menghasilkan teks dengan AI.');
 }

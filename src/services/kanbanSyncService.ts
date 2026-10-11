@@ -285,36 +285,36 @@ export class KanbanSyncService {
 
   // Send single payload to GAS endpoint
   private async sendPostToGas(gasUrl: string, item: QueuedCardChange): Promise<boolean> {
+    const cleanUrl = GasApiService.normalizeGasUrl(gasUrl);
+    let payloadAction = 'upsert_card';
+    let payloadBody: any = {};
+
+    if (item.action === 'status_change') {
+      payloadAction = 'update_card_status';
+      payloadBody = {
+        action: 'update_card_status',
+        cardId: item.cardId,
+        newStatus: item.newStatus,
+        oldStatus: item.oldStatus,
+        feeAmount: item.card?.FeeAmount,
+        tanggalApprove: item.card?.TanggalApprove,
+        updatedAt: item.timestamp,
+      };
+    } else if (item.action === 'upsert') {
+      payloadAction = 'upsert_card';
+      payloadBody = {
+        action: 'upsert_card',
+        card: item.card,
+      };
+    } else if (item.action === 'delete') {
+      payloadAction = 'delete_card';
+      payloadBody = {
+        action: 'delete_card',
+        cardId: item.cardId,
+      };
+    }
+
     try {
-      const cleanUrl = GasApiService.normalizeGasUrl(gasUrl);
-      let payloadAction = 'upsert_card';
-      let payloadBody: any = {};
-
-      if (item.action === 'status_change') {
-        payloadAction = 'update_card_status';
-        payloadBody = {
-          action: 'update_card_status',
-          cardId: item.cardId,
-          newStatus: item.newStatus,
-          oldStatus: item.oldStatus,
-          feeAmount: item.card?.FeeAmount,
-          tanggalApprove: item.card?.TanggalApprove,
-          updatedAt: item.timestamp,
-        };
-      } else if (item.action === 'upsert') {
-        payloadAction = 'upsert_card';
-        payloadBody = {
-          action: 'upsert_card',
-          card: item.card,
-        };
-      } else if (item.action === 'delete') {
-        payloadAction = 'delete_card';
-        payloadBody = {
-          action: 'delete_card',
-          cardId: item.cardId,
-        };
-      }
-
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 12000);
 
@@ -342,8 +342,37 @@ export class KanbanSyncService {
         }
       }
 
+      // Fallback via server-side /api/gas-proxy
+      try {
+        const proxyRes = await fetch('/api/gas-proxy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetUrl: cleanUrl,
+            method: 'POST',
+            body: payloadBody,
+          }),
+        });
+        if (proxyRes.ok) return true;
+      } catch {}
+
       return false;
     } catch {
+      // Fallback via server-side /api/gas-proxy on network/CORS error
+      try {
+        const cleanUrl = GasApiService.normalizeGasUrl(gasUrl);
+        const proxyRes = await fetch('/api/gas-proxy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetUrl: cleanUrl,
+            method: 'POST',
+            body: payloadBody,
+          }),
+        });
+        if (proxyRes.ok) return true;
+      } catch {}
+
       return false;
     }
   }

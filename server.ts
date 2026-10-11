@@ -26,26 +26,68 @@ const ai = new GoogleGenAI({
   },
 });
 
-// Robust model caller with fallback between flash-lite and flash
+// Robust model caller with fallback between candidate models
 async function generateAiText(prompt: string): Promise<string> {
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.1-flash-lite',
-      contents: prompt,
-    });
-    return response.text || '';
-  } catch (err: any) {
-    console.warn('Attempting secondary model gemini-3.8-flash:', err?.message);
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: prompt,
-    });
-    return response.text || '';
+  const candidateModels = ['gemini-2.5-flash', 'gemini-3.8-flash', 'gemini-3.1-flash-lite'];
+  let lastError: any = null;
+
+  for (const model of candidateModels) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+      });
+      if (response.text) return response.text;
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`Attempting fallback from ${model}:`, err?.message || err);
+    }
   }
+
+  throw lastError || new Error('Gagal menghasilkan teks dengan model Gemini AI.');
 }
 
+// Google Apps Script Proxy Endpoint
+app.post('/api/gas-proxy', async (req, res) => {
+  try {
+    const { targetUrl, method = 'GET', body } = req.body || {};
+    if (!targetUrl || typeof targetUrl !== 'string') {
+      return res.status(400).json({ success: false, error: 'targetUrl wajib diisi' });
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+
+    const fetchOptions: RequestInit = {
+      method,
+      signal: controller.signal,
+    };
+
+    if (method === 'POST' && body) {
+      fetchOptions.headers = { 'Content-Type': 'text/plain;charset=utf-8' };
+      fetchOptions.body = typeof body === 'string' ? body : JSON.stringify(body);
+    }
+
+    const remoteRes = await fetch(targetUrl, fetchOptions);
+    clearTimeout(timer);
+
+    const text = await remoteRes.text();
+    try {
+      const json = JSON.parse(text);
+      return res.status(200).json(json);
+    } catch {
+      return res.status(200).send(text);
+    }
+  } catch (proxyErr: any) {
+    return res.status(500).json({
+      success: false,
+      error: `GAS Proxy Error: ${proxyErr?.message || 'Gagal menghubungi server GAS'}`,
+    });
+  }
+});
+
 // AI Endpoint: Generate Caption & Copywriting
-app.post('/api/ai/caption', async (req, res) => {
+app.post(['/api/ai/caption', '/api/caption'], async (req, res) => {
   try {
     const { klien, tema, ideKonten, jenisKonten, tone, platform, notes } = req.body;
     const prompt = `Anda adalah Senior Social Media Copywriter & Creative Strategist di agensi obeecreatives.
@@ -75,7 +117,7 @@ Gunakan gaya bahasa Indonesia yang natural, mengalir, dan bernilai jual tinggi.`
 });
 
 // AI Endpoint: Brainstorm Ide Konten
-app.post('/api/ai/brainstorm', async (req, res) => {
+app.post(['/api/ai/brainstorm', '/api/brainstorm'], async (req, res) => {
   try {
     const { klien, tipeProject, jenisKonten, tema } = req.body;
     const prompt = `Anda adalah Creative Director di agensi obeecreatives.
@@ -102,7 +144,7 @@ Tulis dalam bahasa Indonesia yang ringkas, modern, dan langsung bisa dieksekusi 
 });
 
 // AI Endpoint: Summarize Action Items from Card Comments
-app.post('/api/ai/summarize-revisi', async (req, res) => {
+app.post(['/api/ai/summarize-revisi', '/api/summarize-revisi'], async (req, res) => {
   try {
     const { comments, cardTitle, clientName } = req.body;
     if (!comments || !Array.isArray(comments) || comments.length === 0) {
