@@ -1,6 +1,12 @@
 import { ContentItem, RateCardItem, GeneralLink, ActivityLog, StatusType, UserRole, CrmClientItem, CardComment, KpiTargets, RoleMenuPermissions, DEFAULT_ROLE_MENU_PERMISSIONS, ViewTab } from '../types';
 import { INITIAL_CONTENT_ITEMS, INITIAL_RATE_CARDS, INITIAL_LINKS, FULL_ACCESS_EMAILS, INITIAL_CRM_DATA, KATEGORI_INTERNAL_OPTIONS } from '../data/seedData';
 import { geoService } from './geoService';
+import {
+  getTodayIndoDateString,
+  getBulanIndoFromDate,
+  getTahunFromDate,
+  normalizeDateToYMD,
+} from '../utils/dateFormatter';
 
 const KEY_CONTENT = 'obee_pcs_content_v1';
 const KEY_RATE_CARDS = 'obee_pcs_rate_card_v1';
@@ -99,31 +105,44 @@ class StorageService {
         : 0;
 
     let previousStatus: StatusType | undefined;
+    const todayIndo = getTodayIndoDateString();
+    const prodDate = itemData.TanggalProduksi ? normalizeDateToYMD(itemData.TanggalProduksi) : todayIndo;
+    const calcBulan = itemData.Bulan || getBulanIndoFromDate(prodDate);
+    const calcTahun = itemData.Tahun || getTahunFromDate(prodDate);
 
     const existingIndex = list.findIndex((it) => it.ID === targetId);
     if (existingIndex > -1) {
       previousStatus = list[existingIndex].Status;
+      const existingItem = list[existingIndex];
+      const finalProdDate = itemData.TanggalProduksi ? normalizeDateToYMD(itemData.TanggalProduksi) : existingItem.TanggalProduksi;
+
       const updatedItem: ContentItem = {
-        ...list[existingIndex],
+        ...existingItem,
         ...itemData,
         ID: targetId,
+        TanggalProduksi: finalProdDate,
+        Bulan: itemData.Bulan || existingItem.Bulan || (finalProdDate ? getBulanIndoFromDate(finalProdDate) : calcBulan),
+        Tahun: itemData.Tahun || existingItem.Tahun || (finalProdDate ? getTahunFromDate(finalProdDate) : calcTahun),
+        JadwalPosting: itemData.JadwalPosting !== undefined ? normalizeDateToYMD(itemData.JadwalPosting) : existingItem.JadwalPosting,
         UpdatedAt: nowIso,
         FeeAmount:
           itemData.TipeProject === 'Internal'
             ? 0
-            : list[existingIndex].FeeAmount > 0
-            ? list[existingIndex].FeeAmount
+            : existingItem.FeeAmount > 0
+            ? existingItem.FeeAmount
             : calculatedFee,
         TanggalApprove:
-          list[existingIndex].TanggalApprove ||
-          (itemData.Status === 'Approved / RtP' ? nowIso.slice(0, 10) : undefined),
+          existingItem.TanggalApprove ||
+          (itemData.Status === 'Approved / RtP' ? todayIndo : undefined),
       } as ContentItem;
       list[existingIndex] = updatedItem;
     } else {
       const newItem: ContentItem = {
         ID: targetId,
         Klien: itemData.Klien || 'INOVASI PANGAN LESTARI',
-        TanggalProduksi: itemData.TanggalProduksi || nowIso.slice(0, 10),
+        TanggalProduksi: prodDate,
+        Bulan: calcBulan,
+        Tahun: calcTahun,
         Tema: itemData.Tema || itemData.IdeKonten || 'Ide Baru',
         IdeKonten: itemData.IdeKonten || '',
         Detail: itemData.Detail || '',
@@ -134,7 +153,7 @@ class StorageService {
         ProjectTools: itemData.ProjectTools || 'Canva',
         Creator: itemData.Creator || this.getIdentity(),
         Status: itemData.Status || 'New Idea',
-        JadwalPosting: itemData.JadwalPosting || '',
+        JadwalPosting: itemData.JadwalPosting ? normalizeDateToYMD(itemData.JadwalPosting) : '',
         File: itemData.File || '',
         Catatan: itemData.Catatan || '',
         FeeAmount: calculatedFee,
@@ -143,7 +162,7 @@ class StorageService {
         ChecklistAsset: !!itemData.ChecklistAsset,
         ChecklistCaption: !!itemData.ChecklistCaption,
         TipeProject: itemData.TipeProject || 'Komersil',
-        TanggalApprove: itemData.Status === 'Approved / RtP' ? nowIso.slice(0, 10) : undefined,
+        TanggalApprove: itemData.Status === 'Approved / RtP' ? todayIndo : undefined,
         comments: itemData.comments || [],
       };
       list.unshift(newItem);
@@ -238,7 +257,7 @@ class StorageService {
 
     if (newStatus === 'Approved / RtP') {
       if (!item.TanggalApprove) {
-        item.TanggalApprove = new Date().toISOString().slice(0, 10);
+        item.TanggalApprove = getTodayIndoDateString();
       }
       if (item.TipeProject !== 'Internal' && item.FeeAmount === 0) {
         const rateCards = this.getRateCards();

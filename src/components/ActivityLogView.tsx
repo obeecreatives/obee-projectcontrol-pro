@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ActivityLog } from '../types';
+import { formatDateTimeIndo } from '../utils/dateFormatter';
 import {
   History,
   Sparkles,
@@ -23,19 +24,7 @@ export const ActivityLogView: React.FC<ActivityLogViewProps> = ({ logs, onRefres
   const [filterMode, setFilterMode] = useState<string>('ALL');
 
   const formatTime = (isoString: string) => {
-    try {
-      const d = new Date(isoString);
-      if (isNaN(d.getTime())) return isoString;
-      return d.toLocaleString('id-ID', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return isoString;
-    }
+    return formatDateTimeIndo(isoString);
   };
 
   const filteredLogs = logs.filter((log) => {

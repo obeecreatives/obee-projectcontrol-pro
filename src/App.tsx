@@ -647,10 +647,12 @@ export default function App() {
 
       {/* Mobile Bottom Navigation Bar */}
       <MobileBottomNav
+        key={`bottom-nav-${menuPermissionsVersion}`}
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
         onOpenMoreMenu={() => setIsMobileMoreOpen(true)}
         isDarkMode={isDarkMode}
+        activeRole={activeRole}
       />
 
       {/* Mobile "More" Drawer / Sheet */}

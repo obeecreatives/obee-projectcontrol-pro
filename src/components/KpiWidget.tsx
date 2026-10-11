@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { ContentItem, UserRole, KpiTargets } from '../types';
 import { ROLES, normalizeClientName, normalizeCreatorName } from '../data/seedData';
 import { storageService, DEFAULT_KPI_TARGETS } from '../services/storageService';
-import { formatDateIndo } from '../utils/dateFormatter';
+import { formatDateIndo, parseDateSafe, getTodayIndoDateString } from '../utils/dateFormatter';
 import {
   TrendingUp,
   Clock,
@@ -45,8 +45,12 @@ export const KpiWidget: React.FC<KpiWidgetProps> = ({
   const [tempTargets, setTempTargets] = useState<KpiTargets>(targets);
 
   const today = useMemo(() => new Date(), []);
-  const currentYear = today.getFullYear();
-  const currentMonthIdx = today.getMonth(); // 0-indexed
+  const todayParts = useMemo(() => {
+    const parsed = parseDateSafe(getTodayIndoDateString());
+    return parsed || { year: new Date().getFullYear(), month: new Date().getMonth(), day: new Date().getDate() };
+  }, []);
+  const currentYear = todayParts.year;
+  const currentMonthIdx = todayParts.month; // 0-indexed
 
   // Available unique clients for filter
   const clientOptions = useMemo(() => {
@@ -75,17 +79,17 @@ export const KpiWidget: React.FC<KpiWidgetProps> = ({
       const dateStr = it.TanggalProduksi || it.TanggalApprove || it.CreatedAt || '';
       if (!dateStr) return true;
 
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return true;
+      const parsed = parseDateSafe(dateStr);
+      if (!parsed) return true;
 
       if (period === 'current_month') {
-        return d.getFullYear() === currentYear && d.getMonth() === currentMonthIdx;
+        return parsed.year === currentYear && parsed.month === currentMonthIdx;
       }
 
       if (period === 'last_month') {
         const lastMonth = currentMonthIdx === 0 ? 11 : currentMonthIdx - 1;
         const lastYear = currentMonthIdx === 0 ? currentYear - 1 : currentYear;
-        return d.getFullYear() === lastYear && d.getMonth() === lastMonth;
+        return parsed.year === lastYear && parsed.month === lastMonth;
       }
 
       return true;
@@ -142,10 +146,10 @@ export const KpiWidget: React.FC<KpiWidgetProps> = ({
 
       // Check Turnaround Speed (TanggalProduksi -> TanggalApprove)
       if (it.TanggalProduksi && it.TanggalApprove) {
-        const start = new Date(it.TanggalProduksi).getTime();
-        const end = new Date(it.TanggalApprove).getTime();
-        if (!isNaN(start) && !isNaN(end) && end >= start) {
-          const diffDays = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)));
+        const pStart = parseDateSafe(it.TanggalProduksi);
+        const pEnd = parseDateSafe(it.TanggalApprove);
+        if (pStart && pEnd && pEnd.date.getTime() >= pStart.date.getTime()) {
+          const diffDays = Math.max(1, Math.round((pEnd.date.getTime() - pStart.date.getTime()) / (1000 * 60 * 60 * 24)));
           totalTurnaroundDays += diffDays;
           turnaroundItemsCount++;
         }
@@ -154,25 +158,28 @@ export const KpiWidget: React.FC<KpiWidgetProps> = ({
       // On-Time vs Overdue evaluation
       if (it.JadwalPosting) {
         totalScheduled++;
-        const targetDate = new Date(it.JadwalPosting);
-        targetDate.setHours(23, 59, 59, 999);
+        const pTarget = parseDateSafe(it.JadwalPosting);
+        if (pTarget) {
+          const targetTime = new Date(pTarget.year, pTarget.month, pTarget.day, 23, 59, 59, 999).getTime();
 
-        if (isDone) {
-          // If approved, check if approved on/before schedule
-          const approveDate = it.TanggalApprove ? new Date(it.TanggalApprove) : today;
-          if (approveDate <= targetDate) {
-            onTimeCount++;
+          if (isDone) {
+            // If approved, check if approved on/before schedule
+            const pApprove = parseDateSafe(it.TanggalApprove);
+            const approveTime = pApprove ? pApprove.date.getTime() : Date.now();
+            if (approveTime <= targetTime) {
+              onTimeCount++;
+            } else {
+              overdueCount++;
+            }
           } else {
-            overdueCount++;
-          }
-        } else {
-          // If not yet finished and target date has passed -> Overdue
-          if (today > targetDate) {
-            overdueCount++;
-            const daysLate = Math.max(1, Math.ceil((today.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24)));
-            overdueList.push({ item: it, daysLate });
-          } else {
-            onTimeCount++;
+            // If not yet finished and target date has passed -> Overdue
+            if (Date.now() > targetTime) {
+              overdueCount++;
+              const daysLate = Math.max(1, Math.ceil((Date.now() - targetTime) / (1000 * 60 * 60 * 24)));
+              overdueList.push({ item: it, daysLate });
+            } else {
+              onTimeCount++;
+            }
           }
         }
       }

@@ -29,6 +29,13 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { AiAssistantModal, AiMode } from './AiAssistantModal';
+import {
+  getTodayIndoDateString,
+  normalizeDateToYMD,
+  getBulanIndoFromDate,
+  getTahunFromDate,
+  formatRelativeTimeIndo,
+} from '../utils/dateFormatter';
 
 interface ContentModalProps {
   isOpen: boolean;
@@ -69,25 +76,7 @@ const COMMENT_CATEGORIES: CommentCategory[] = [
 ];
 
 function formatRelativeTime(isoString: string): string {
-  try {
-    const diffMs = Date.now() - new Date(isoString).getTime();
-    const diffSec = Math.floor(diffMs / 1000);
-    if (diffSec < 60) return 'Baru saja';
-    const diffMin = Math.floor(diffSec / 60);
-    if (diffMin < 60) return `${diffMin} mnt lalu`;
-    const diffHour = Math.floor(diffMin / 60);
-    if (diffHour < 24) return `${diffHour} jam lalu`;
-    const diffDay = Math.floor(diffHour / 24);
-    if (diffDay < 7) return `${diffDay} hari lalu`;
-    return new Date(isoString).toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return isoString;
-  }
+  return formatRelativeTimeIndo(isoString);
 }
 
 export const ContentModal: React.FC<ContentModalProps> = ({
@@ -202,7 +191,7 @@ export const ContentModal: React.FC<ContentModalProps> = ({
       setKlien('INOVASI PANGAN LESTARI');
       setKlienInternal(KATEGORI_INTERNAL_OPTIONS[0]);
       setKlienInternalLainnya('');
-      const todayIso = new Date().toISOString().slice(0, 10);
+      const todayIso = getTodayIndoDateString();
       setTanggalProduksi(todayIso);
       setJadwalPosting('');
       setTema('');
@@ -251,12 +240,17 @@ export const ContentModal: React.FC<ContentModalProps> = ({
 
     setIsSubmitting(true);
 
+    const cleanTanggalProduksi = normalizeDateToYMD(tanggalProduksi);
+    const cleanJadwalPosting = normalizeDateToYMD(jadwalPosting);
+
     const payload: Partial<ContentItem> = {
       ...(editingItem ? { ID: editingItem.ID } : {}),
       TipeProject: tipeProject,
       Klien: finalKlien,
-      TanggalProduksi: tanggalProduksi,
-      JadwalPosting: jadwalPosting,
+      TanggalProduksi: cleanTanggalProduksi,
+      Bulan: editingItem?.Bulan || (cleanTanggalProduksi ? getBulanIndoFromDate(cleanTanggalProduksi) : ''),
+      Tahun: editingItem?.Tahun || (cleanTanggalProduksi ? getTahunFromDate(cleanTanggalProduksi) : new Date().getFullYear()),
+      JadwalPosting: cleanJadwalPosting,
       Tema: tema,
       IdeKonten: ideKonten,
       Detail: detail,

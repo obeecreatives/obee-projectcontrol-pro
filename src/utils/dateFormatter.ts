@@ -1,7 +1,10 @@
 /**
- * Utilitas Pemformatan Tanggal & Waktu Berstandar Locale Indonesia (id-ID)
+ * Utilitas Pemformatan Tanggal & Waktu Berstandar Locale Indonesia (id-ID) & WIB (Asia/Jakarta)
  * obeecreatives Workspace OS
  */
+
+export const INDONESIA_LOCALE = 'id-ID';
+export const INDONESIA_TIMEZONE = 'Asia/Jakarta';
 
 export const BULAN_INDONESIA = [
   'Januari',
@@ -46,6 +49,142 @@ export const HARI_INDONESIA_LENGKAP = [
 ];
 
 /**
+ * Parsing tanggal secara aman dan kebal timezone shift (WIB - Asia/Jakarta).
+ * Mencegah pergeseran tanggal (off-by-one day) akibat konversi UTC browser / Google Spreadsheet.
+ */
+export function parseDateSafe(
+  dateInput?: string | Date | null
+): { year: number; month: number; day: number; date: Date } | null {
+  if (!dateInput) return null;
+
+  try {
+    if (typeof dateInput === 'string') {
+      const clean = dateInput.trim();
+      if (!clean) return null;
+
+      // 1. Format Standar YYYY-MM-DD
+      const ymdMatch = clean.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+      if (ymdMatch) {
+        const year = parseInt(ymdMatch[1], 10);
+        const month = parseInt(ymdMatch[2], 10) - 1; // 0-indexed
+        const day = parseInt(ymdMatch[3], 10);
+        return { year, month, day, date: new Date(year, month, day, 12, 0, 0) };
+      }
+
+      // 2. Format Indonesia DD/MM/YYYY atau DD-MM-YYYY
+      const dmyMatch = clean.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
+      if (dmyMatch) {
+        const day = parseInt(dmyMatch[1], 10);
+        const month = parseInt(dmyMatch[2], 10) - 1;
+        const year = parseInt(dmyMatch[3], 10);
+        return { year, month, day, date: new Date(year, month, day, 12, 0, 0) };
+      }
+
+      // 3. ISO String atau string lainnya
+      const d = new Date(clean);
+      if (isNaN(d.getTime())) return null;
+
+      // Gunakan formatter Asia/Jakarta untuk mengekstrak bagian tanggal lokal yang tepat
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: INDONESIA_TIMEZONE,
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+      }).formatToParts(d);
+
+      let year = d.getFullYear();
+      let month = d.getMonth();
+      let day = d.getDate();
+
+      parts.forEach((p) => {
+        if (p.type === 'year') year = parseInt(p.value, 10);
+        if (p.type === 'month') month = parseInt(p.value, 10) - 1;
+        if (p.type === 'day') day = parseInt(p.value, 10);
+      });
+
+      return { year, month, day, date: new Date(year, month, day, 12, 0, 0) };
+    }
+
+    if (dateInput instanceof Date) {
+      if (isNaN(dateInput.getTime())) return null;
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: INDONESIA_TIMEZONE,
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+      }).formatToParts(dateInput);
+
+      let year = dateInput.getFullYear();
+      let month = dateInput.getMonth();
+      let day = dateInput.getDate();
+
+      parts.forEach((p) => {
+        if (p.type === 'year') year = parseInt(p.value, 10);
+        if (p.type === 'month') month = parseInt(p.value, 10) - 1;
+        if (p.type === 'day') day = parseInt(p.value, 10);
+      });
+
+      return { year, month, day, date: new Date(year, month, day, 12, 0, 0) };
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Mengambil tanggal hari ini dalam format YYYY-MM-DD berbasis zona waktu Indonesia (Asia/Jakarta, WIB)
+ * Selalu akurat tanpa terpengaruh perbedaan zona waktu mesin browser.
+ */
+export function getTodayIndoDateString(): string {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: INDONESIA_TIMEZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    return formatter.format(new Date());
+  } catch {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+}
+
+/**
+ * Normalisasi string tanggal apa pun ke format YYYY-MM-DD standar Google Spreadsheet
+ */
+export function normalizeDateToYMD(dateInput?: string | Date | null): string {
+  const parsed = parseDateSafe(dateInput);
+  if (!parsed) return typeof dateInput === 'string' ? dateInput.trim() : '';
+  const mm = String(parsed.month + 1).padStart(2, '0');
+  const dd = String(parsed.day).padStart(2, '0');
+  return `${parsed.year}-${mm}-${dd}`;
+}
+
+/**
+ * Ekstrak Nama Bulan Indonesia (contoh: "September") dari tanggal
+ */
+export function getBulanIndoFromDate(dateInput?: string | Date | null): string {
+  const parsed = parseDateSafe(dateInput);
+  if (!parsed) return '';
+  return BULAN_INDONESIA[parsed.month] || '';
+}
+
+/**
+ * Ekstrak Tahun dari tanggal
+ */
+export function getTahunFromDate(dateInput?: string | Date | null): number {
+  const parsed = parseDateSafe(dateInput);
+  if (!parsed) return new Date().getFullYear();
+  return parsed.year;
+}
+
+/**
  * Format string tanggal (YYYY-MM-DD atau ISO) ke format tanggal Indonesia
  * Contoh: "2026-07-31" -> "31 Jul 2026"
  */
@@ -55,47 +194,38 @@ export function formatDateIndo(
 ): string {
   if (!dateInput) return '-';
   try {
-    let d: Date;
-    if (typeof dateInput === 'string') {
-      // Tangani format YYYY-MM-DD secara aman agar tidak terpengaruh UTC offset
-      if (/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
-        const [year, month, day] = dateInput.split('-').map(Number);
-        d = new Date(year, month - 1, day);
-      } else {
-        d = new Date(dateInput);
-      }
-    } else {
-      d = dateInput;
-    }
-
-    if (isNaN(d.getTime())) return String(dateInput);
+    const parsed = parseDateSafe(dateInput);
+    if (!parsed) return String(dateInput);
 
     const defaultOptions: Intl.DateTimeFormatOptions = {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
+      timeZone: INDONESIA_TIMEZONE,
     };
 
-    return d.toLocaleDateString('id-ID', options || defaultOptions);
+    return parsed.date.toLocaleDateString(INDONESIA_LOCALE, options || defaultOptions);
   } catch {
     return String(dateInput);
   }
 }
 
 /**
- * Format tanggal dan jam ke locale Indonesia
+ * Format tanggal dan jam ke locale Indonesia dengan indikator WIB
  * Contoh: "2026-07-31T14:30:00Z" -> "31 Jul 2026, 21.30 WIB"
  */
 export function formatDateTimeIndo(
   dateInput?: string | Date | null,
-  includeSeconds = false
+  includeSeconds = false,
+  includeTzLabel = true
 ): string {
   if (!dateInput) return '-';
   try {
     const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
     if (isNaN(d.getTime())) return String(dateInput);
 
-    const formatted = d.toLocaleString('id-ID', {
+    const formatted = d.toLocaleString(INDONESIA_LOCALE, {
+      timeZone: INDONESIA_TIMEZONE,
       day: '2-digit',
       month: 'short',
       year: 'numeric',
@@ -104,30 +234,34 @@ export function formatDateTimeIndo(
       second: includeSeconds ? '2-digit' : undefined,
     });
 
-    return formatted;
+    return includeTzLabel ? `${formatted} WIB` : formatted;
   } catch {
     return String(dateInput);
   }
 }
 
 /**
- * Format waktu jam saja ke locale Indonesia
- * Contoh: "14:30:15"
+ * Format waktu jam saja ke locale Indonesia (WIB)
+ * Contoh: "14.30 WIB"
  */
 export function formatTimeIndo(
   dateInput?: string | Date | null,
-  includeSeconds = true
+  includeSeconds = false,
+  includeTzLabel = true
 ): string {
   if (!dateInput) return '-';
   try {
     const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
     if (isNaN(d.getTime())) return String(dateInput);
 
-    return d.toLocaleTimeString('id-ID', {
+    const formatted = d.toLocaleTimeString(INDONESIA_LOCALE, {
+      timeZone: INDONESIA_TIMEZONE,
       hour: '2-digit',
       minute: '2-digit',
       second: includeSeconds ? '2-digit' : undefined,
     });
+
+    return includeTzLabel ? `${formatted} WIB` : formatted;
   } catch {
     return String(dateInput);
   }
@@ -148,12 +282,13 @@ export function formatRelativeTimeIndo(isoString: string): string {
     if (diffHour < 24) return `${diffHour} jam lalu`;
     const diffDay = Math.floor(diffHour / 24);
     if (diffDay < 7) return `${diffDay} hari lalu`;
-    return new Date(isoString).toLocaleDateString('id-ID', {
+    return new Date(isoString).toLocaleDateString(INDONESIA_LOCALE, {
+      timeZone: INDONESIA_TIMEZONE,
       day: 'numeric',
       month: 'short',
       hour: '2-digit',
       minute: '2-digit',
-    });
+    }) + ' WIB';
   } catch {
     return isoString;
   }
@@ -164,5 +299,6 @@ export function formatRelativeTimeIndo(isoString: string): string {
  * Contoh: 15000 -> "Rp 15.000"
  */
 export function formatRupiah(amount: number): string {
-  return `Rp ${Number(amount || 0).toLocaleString('id-ID')}`;
+  return `Rp ${Number(amount || 0).toLocaleString(INDONESIA_LOCALE)}`;
 }
+

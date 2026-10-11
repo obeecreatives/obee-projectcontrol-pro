@@ -349,7 +349,13 @@ function sheetToObjects_(sheet) {
     for (var j = 0; j < headers.length; j++) {
       var val = row[j];
       if (val instanceof Date) {
-        val = Utilities.formatDate(val, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+        var tz = 'Asia/Jakarta';
+        try {
+          tz = (ss && ss.getSpreadsheetTimeZone()) || Session.getScriptTimeZone() || 'Asia/Jakarta';
+        } catch (e) {
+          tz = 'Asia/Jakarta';
+        }
+        val = Utilities.formatDate(val, tz, 'yyyy-MM-dd');
       }
       obj[headers[j]] = val;
     }

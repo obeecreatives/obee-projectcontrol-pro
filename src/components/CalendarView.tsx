@@ -1,6 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { ContentItem, UserRole } from '../types';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, ExternalLink, Edit2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, ExternalLink, Edit2, X, Clock, Sparkles } from 'lucide-react';
+import {
+  parseDateSafe,
+  BULAN_INDONESIA,
+  HARI_INDONESIA_PENDEK,
+  formatDateIndo,
+  getTodayIndoDateString,
+} from '../utils/dateFormatter';
 
 interface CalendarViewProps {
   items: ContentItem[];
@@ -9,25 +16,23 @@ interface CalendarViewProps {
   isDarkMode?: boolean;
 }
 
-const BULAN_NAMA = [
-  'Januari',
-  'Februari',
-  'Maret',
-  'April',
-  'Mei',
-  'Juni',
-  'Juli',
-  'Agustus',
-  'September',
-  'Oktober',
-  'November',
-  'Desember',
-];
-
-const HARI_NAMA = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-
 export const CalendarView: React.FC<CalendarViewProps> = ({ items, activeRole, onEditItem, isDarkMode = true }) => {
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 8, 1)); // Sep 2026 as per dataset
+  // Tentukan bulan awal berdasarkan tanggal item yang ada di dataset atau hari ini
+  const initialDate = useMemo(() => {
+    // Cari tanggal posting pertama yang valid jika ada
+    for (const item of items) {
+      if (item.JadwalPosting) {
+        const parsed = parseDateSafe(item.JadwalPosting);
+        if (parsed) {
+          return new Date(parsed.year, parsed.month, 1);
+        }
+      }
+    }
+    const todayParsed = parseDateSafe(getTodayIndoDateString());
+    return todayParsed ? new Date(todayParsed.year, todayParsed.month, 1) : new Date();
+  }, [items]);
+
+  const [currentDate, setCurrentDate] = useState<Date>(initialDate);
   const [selectedKlien, setSelectedKlien] = useState<string>('ALL');
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
@@ -45,7 +50,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ items, activeRole, o
   };
 
   const handleToday = () => {
-    setCurrentDate(new Date());
+    const todayParsed = parseDateSafe(getTodayIndoDateString());
+    if (todayParsed) {
+      setCurrentDate(new Date(todayParsed.year, todayParsed.month, 1));
+    } else {
+      setCurrentDate(new Date());
+    }
     setSelectedDay(null);
   };
 
@@ -57,23 +67,26 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ items, activeRole, o
     return Array.from(set).sort();
   }, [items]);
 
+  // Filter item yang jadwal postingnya cocok dengan bulan dan tahun kalender ini (bebas bug UTC offset)
   const monthCalendarItems = useMemo(() => {
     return items.filter((it) => {
       if (!it.JadwalPosting) return false;
-      const d = new Date(it.JadwalPosting);
-      if (isNaN(d.getTime())) return false;
-      if (d.getFullYear() !== year || d.getMonth() !== month) return false;
+      const parsed = parseDateSafe(it.JadwalPosting);
+      if (!parsed) return false;
+      if (parsed.year !== year || parsed.month !== month) return false;
       if (selectedKlien !== 'ALL' && it.Klien !== selectedKlien) return false;
       return true;
     });
   }, [items, year, month, selectedKlien]);
 
+  // Petakan konten per tanggal hari (1-31)
   const itemsByDay = useMemo(() => {
     const map: Record<number, ContentItem[]> = {};
     monthCalendarItems.forEach((it) => {
       if (!it.JadwalPosting) return;
-      const d = new Date(it.JadwalPosting);
-      const day = d.getDate();
+      const parsed = parseDateSafe(it.JadwalPosting);
+      if (!parsed) return;
+      const day = parsed.day;
       if (!map[day]) map[day] = [];
       map[day].push(it);
     });
@@ -84,6 +97,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ items, activeRole, o
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const selectedDayItems = selectedDay ? itemsByDay[selectedDay] || [] : [];
+
 
   return (
     <div className="flex flex-col gap-4">
@@ -99,7 +113,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ items, activeRole, o
               <ChevronLeft className="w-5 h-5" />
             </button>
             <span className={`font-bold text-sm sm:text-base min-w-[150px] text-center px-2 ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
-              {BULAN_NAMA[month]} {year}
+              {BULAN_INDONESIA[month]} {year}
             </span>
             <button
               onClick={handleNextMonth}
@@ -112,9 +126,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ items, activeRole, o
 
           <button
             onClick={handleToday}
-            className={`text-xs font-semibold px-3 py-2 ${isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'} border rounded-xl transition-colors cursor-pointer`}
+            className={`text-xs font-semibold px-3 py-2 ${isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'} border rounded-xl transition-colors cursor-pointer flex items-center gap-1.5`}
+            title="Lompat ke bulan ini (Waktu Indonesia Barat)"
           >
-            Hari Ini
+            <Clock className="w-3.5 h-3.5 text-amber-500" />
+            <span>Hari Ini (WIB)</span>
           </button>
         </div>
 
@@ -128,6 +144,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ items, activeRole, o
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
               <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>Published</span>
+            </span>
+            <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold hidden sm:inline-flex items-center gap-1">
+              <span>WIB (UTC+7)</span>
             </span>
           </div>
 
@@ -156,7 +175,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ items, activeRole, o
       <div className={`${isDarkMode ? 'bg-[#0f172a]/90 border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-4 overflow-hidden transition-colors`}>
         {/* Days of Week Header */}
         <div className="grid grid-cols-7 gap-1.5 sm:gap-2 mb-2">
-          {HARI_NAMA.map((h, i) => (
+          {HARI_INDONESIA_PENDEK.map((h, i) => (
             <div
               key={h}
               className={`text-center font-bold text-xs uppercase py-2 tracking-wider ${
@@ -244,7 +263,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ items, activeRole, o
               <div className="flex items-center gap-2">
                 <CalendarIcon className="w-5 h-5 text-red-500" />
                 <h3 className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  Jadwal Konten - {selectedDay} {BULAN_NAMA[month]} {year}
+                  Jadwal Konten - {selectedDay} {BULAN_INDONESIA[month]} {year}
                 </h3>
               </div>
               <button

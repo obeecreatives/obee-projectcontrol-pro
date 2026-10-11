@@ -95,7 +95,11 @@ function sheetToObjects_(sheet) {
     if (vals[i].join('') === '') continue;
     var obj = {};
     for (var j = 0; j < headers.length; j++) {
-      obj[headers[j]] = vals[i][j];
+      var val = vals[i][j];
+      if (val instanceof Date) {
+        val = Utilities.formatDate(val, 'Asia/Jakarta', 'yyyy-MM-dd HH:mm:ss');
+      }
+      obj[headers[j]] = val;
     }
     rows.push(obj);
   }

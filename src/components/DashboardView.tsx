@@ -5,6 +5,11 @@ import { storageService } from '../services/storageService';
 import { geoService } from '../services/geoService';
 import { KpiWidget } from './KpiWidget';
 import {
+  BULAN_INDONESIA,
+  getTodayIndoDateString,
+  parseDateSafe,
+} from '../utils/dateFormatter';
+import {
   FileText,
   DollarSign,
   Users,
@@ -32,20 +37,7 @@ interface DashboardViewProps {
   isDarkMode?: boolean;
 }
 
-const BULAN_NAMA = [
-  'Januari',
-  'Februari',
-  'Maret',
-  'April',
-  'Mei',
-  'Juni',
-  'Juli',
-  'Agustus',
-  'September',
-  'Oktober',
-  'November',
-  'Desember',
-];
+const BULAN_NAMA = BULAN_INDONESIA;
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
   items,

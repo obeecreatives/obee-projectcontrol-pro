@@ -1,6 +1,11 @@
 import { ContentItem, StatusType } from '../types';
 import { storageService } from './storageService';
 import { GasApiService } from './gasApiService';
+import {
+  normalizeDateToYMD,
+  getBulanIndoFromDate,
+  getTahunFromDate,
+} from '../utils/dateFormatter';
 
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'pending' | 'error';
 
@@ -447,12 +452,19 @@ export class KanbanSyncService {
         // If card has pending local un-pushed change, preserve local copy
         if (pendingIds.has(id)) return;
 
+        const rawProdDate = r.TanggalProduksi || r.tanggal_produksi || '';
+        const cleanProdDate = normalizeDateToYMD(rawProdDate);
+        const rawJadwal = r.JadwalPosting || r.jadwal_posting || '';
+        const cleanJadwal = normalizeDateToYMD(rawJadwal);
+        const rawApprove = r.TanggalApprove || r.tanggal_approve || '';
+        const cleanApprove = normalizeDateToYMD(rawApprove);
+
         const mappedCard: ContentItem = {
           ID: id,
           Klien: r.Klien || r.klien || 'Klien Baru',
-          TanggalProduksi: r.TanggalProduksi || r.tanggal_produksi || '',
-          Bulan: r.Bulan || r.bulan || '',
-          Tahun: Number(r.Tahun || r.tahun) || new Date().getFullYear(),
+          TanggalProduksi: cleanProdDate,
+          Bulan: r.Bulan || r.bulan || (cleanProdDate ? getBulanIndoFromDate(cleanProdDate) : ''),
+          Tahun: Number(r.Tahun || r.tahun) || (cleanProdDate ? getTahunFromDate(cleanProdDate) : new Date().getFullYear()),
           Tema: r.Tema || r.tema || r.IdeKonten || 'Konten',
           IdeKonten: r.IdeKonten || r.ide_konten || '',
           Detail: r.Detail || r.detail || '',
@@ -463,7 +475,7 @@ export class KanbanSyncService {
           ProjectTools: r.ProjectTools || 'Canva',
           Creator: r.Creator || r.creator || '',
           Status: (r.Status || r.status || 'New Idea') as StatusType,
-          JadwalPosting: r.JadwalPosting || '',
+          JadwalPosting: cleanJadwal,
           File: r.File || '',
           Catatan: r.Catatan || '',
           FeeAmount: Number(r.FeeAmount) || 0,
@@ -472,7 +484,7 @@ export class KanbanSyncService {
           ChecklistAsset: r.ChecklistAsset === true || String(r.ChecklistAsset).toUpperCase() === 'TRUE',
           ChecklistCaption: r.ChecklistCaption === true || String(r.ChecklistCaption).toUpperCase() === 'TRUE',
           TipeProject: r.TipeProject === 'Internal' ? 'Internal' : 'Komersil',
-          TanggalApprove: r.TanggalApprove || '',
+          TanggalApprove: cleanApprove,
         };
 
         if (mergedMap.has(id)) {
@@ -855,7 +867,13 @@ function sheetToObjects_(sheet) {
     for (var j = 0; j < headers.length; j++) {
       var val = row[j];
       if (val instanceof Date) {
-        val = Utilities.formatDate(val, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+        var tz = 'Asia/Jakarta';
+        try {
+          tz = (ss && ss.getSpreadsheetTimeZone()) || Session.getScriptTimeZone() || 'Asia/Jakarta';
+        } catch (e) {
+          tz = 'Asia/Jakarta';
+        }
+        val = Utilities.formatDate(val, tz, 'yyyy-MM-dd');
       }
       obj[headers[j]] = val;
     }

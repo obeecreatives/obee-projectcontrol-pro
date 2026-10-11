@@ -512,6 +512,9 @@ function sheetToObjects_(sheet) {
     for (var j = 0; j < headers.length; j++) {
       var key = String(headers[j]).trim();
       var val = row[j];
+      if (val instanceof Date) {
+        val = Utilities.formatDate(val, 'Asia/Jakarta', 'yyyy-MM-dd HH:mm:ss');
+      }
       if (val !== '' && val !== null) hasData = true;
       obj[key] = val;
     }
@@ -615,6 +618,9 @@ function sheetToObjects_(sheet) {
     for (var j = 0; j < headers.length; j++) {
       var key = String(headers[j]).trim();
       var val = row[j];
+      if (val instanceof Date) {
+        val = Utilities.formatDate(val, 'Asia/Jakarta', 'yyyy-MM-dd HH:mm:ss');
+      }
       if (val !== '' && val !== null) hasData = true;
       obj[key] = val;
     }
