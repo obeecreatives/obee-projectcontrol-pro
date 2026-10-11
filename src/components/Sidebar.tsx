@@ -1,6 +1,7 @@
 import React from 'react';
 import { ViewTab, UserRole } from '../types';
 import { ROLES } from '../data/seedData';
+import { storageService } from '../services/storageService';
 import { PWAInstallButton } from './PWAInstallButton';
 import {
   Kanban,
@@ -42,7 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const roleConfig = ROLES[activeRole] || ROLES.project_manager;
 
-  const navItems = [
+  const allNavItems = [
     {
       tab: 'board' as ViewTab,
       label: 'Content Board',
@@ -93,29 +94,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
       description: 'Kelola hak akses & matriks peran',
       badge: 'Role & Akses',
     },
-    ...(['project_manager', 'site_engineer', 'web_developer'].includes(activeRole)
-      ? [
-          {
-            tab: 'headless_gas' as ViewTab,
-            label: 'Headless GAS',
-            shortLabel: 'GAS Sync',
-            icon: <Cpu className="w-5 h-5 text-emerald-500" />,
-            description: 'Sinkronisasi Google Sheet (Dev)',
-          },
-        ]
-      : []),
-    ...(['project_manager', 'web_developer', 'admin'].includes(activeRole)
-      ? [
-          {
-            tab: 'developer_docs' as ViewTab,
-            label: 'Panduan Sistem (PDF)',
-            shortLabel: 'Panduan PDF',
-            icon: <BookOpen className="w-5 h-5 text-amber-500" />,
-            description: 'Dokumentasi teknis & cetak PDF',
-          },
-        ]
-      : []),
+    {
+      tab: 'headless_gas' as ViewTab,
+      label: 'Headless GAS',
+      shortLabel: 'GAS Sync',
+      icon: <Cpu className="w-5 h-5 text-emerald-500" />,
+      description: 'Sinkronisasi Google Sheet (Dev)',
+    },
+    {
+      tab: 'developer_docs' as ViewTab,
+      label: 'Panduan Sistem (PDF)',
+      shortLabel: 'Panduan PDF',
+      icon: <BookOpen className="w-5 h-5 text-amber-500" />,
+      description: 'Dokumentasi teknis & cetak PDF',
+    },
   ];
+
+  // Dynamic RBAC Menu Visibility based on storageService permissions
+  const navItems = allNavItems.filter((item) => storageService.isTabAllowedForRole(activeRole, item.tab));
 
   return (
     <aside

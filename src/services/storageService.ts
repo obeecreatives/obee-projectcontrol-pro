@@ -1,4 +1,4 @@
-import { ContentItem, RateCardItem, GeneralLink, ActivityLog, StatusType, UserRole, CrmClientItem, CardComment, KpiTargets } from '../types';
+import { ContentItem, RateCardItem, GeneralLink, ActivityLog, StatusType, UserRole, CrmClientItem, CardComment, KpiTargets, RoleMenuPermissions, DEFAULT_ROLE_MENU_PERMISSIONS, ViewTab } from '../types';
 import { INITIAL_CONTENT_ITEMS, INITIAL_RATE_CARDS, INITIAL_LINKS, FULL_ACCESS_EMAILS, INITIAL_CRM_DATA, KATEGORI_INTERNAL_OPTIONS } from '../data/seedData';
 import { geoService } from './geoService';
 
@@ -11,6 +11,7 @@ const KEY_IDENTITY = 'pcs_identity_nama';
 const KEY_GAS_URL = 'obee_pcs_gas_url_v1';
 const KEY_CRM_CLIENTS = 'obee_pcs_crm_clients_v1';
 const KEY_KPI_TARGETS = 'obee_pcs_kpi_targets_v1';
+const KEY_MENU_PERMISSIONS = 'obee_pcs_menu_permissions_v1';
 
 export const DEFAULT_KPI_TARGETS: KpiTargets = {
   monthlyContentTarget: 30,
@@ -609,6 +610,44 @@ class StorageService {
     } catch (e) {
       console.error('Failed to save KPI targets:', e);
     }
+  }
+
+  getMenuPermissions(): RoleMenuPermissions {
+    try {
+      const raw = localStorage.getItem(KEY_MENU_PERMISSIONS);
+      if (!raw) return { ...DEFAULT_ROLE_MENU_PERMISSIONS };
+      const parsed = JSON.parse(raw);
+      // Merge with defaults to ensure all roles and keys exist
+      return {
+        ...DEFAULT_ROLE_MENU_PERMISSIONS,
+        ...parsed,
+      };
+    } catch {
+      return { ...DEFAULT_ROLE_MENU_PERMISSIONS };
+    }
+  }
+
+  saveMenuPermissions(perms: RoleMenuPermissions): void {
+    try {
+      localStorage.setItem(KEY_MENU_PERMISSIONS, JSON.stringify(perms));
+    } catch (e) {
+      console.error('Failed to save Menu Permissions:', e);
+    }
+  }
+
+  resetMenuPermissions(): RoleMenuPermissions {
+    try {
+      localStorage.removeItem(KEY_MENU_PERMISSIONS);
+    } catch (e) {
+      console.error('Failed to clear Menu Permissions:', e);
+    }
+    return { ...DEFAULT_ROLE_MENU_PERMISSIONS };
+  }
+
+  isTabAllowedForRole(role: UserRole, tab: ViewTab): boolean {
+    const perms = this.getMenuPermissions();
+    const allowed = perms[role] || DEFAULT_ROLE_MENU_PERMISSIONS[role] || ['board'];
+    return allowed.includes(tab);
   }
 }
 

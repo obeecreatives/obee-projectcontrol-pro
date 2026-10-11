@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { StaffUser, UserRole, SecurityLogItem, DefaultPasswordConfig } from '../types';
+import { StaffUser, UserRole, SecurityLogItem, DefaultPasswordConfig, ViewTab, RoleMenuPermissions, DEFAULT_ROLE_MENU_PERMISSIONS } from '../types';
 import { authService, DEVELOPER_STANDARD_DEFAULT_PASSWORDS } from '../services/authService';
+import { storageService } from '../services/storageService';
 import { ROLES, FULL_ACCESS_EMAILS } from '../data/seedData';
 import {
   ShieldCheck,
@@ -27,6 +28,15 @@ import {
   Shield,
   Send,
   Sliders,
+  CheckSquare,
+  Save,
+  CreditCard,
+  Kanban,
+  Calendar,
+  BarChart3,
+  History,
+  Cpu,
+  BookOpen,
 } from 'lucide-react';
 
 interface AccessSettingsViewProps {
@@ -42,13 +52,19 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
   isDarkMode = true,
   onRefreshDirectory,
 }) => {
-  const [subTab, setSubTab] = useState<'roles' | 'whitelist' | 'passwords' | 'self_service' | 'logs'>('roles');
+  const [subTab, setSubTab] = useState<'roles' | 'menu_matrix' | 'whitelist' | 'passwords' | 'self_service' | 'logs'>('roles');
   const [directory, setDirectory] = useState<StaffUser[]>(() => authService.getDirectory());
   const [roleChangeFeedback, setRoleChangeFeedback] = useState<string | null>(null);
   const [defaultPasswords, setDefaultPasswords] = useState<DefaultPasswordConfig>(() =>
     authService.getDefaultPasswordConfig()
   );
   const [securityLogs, setSecurityLogs] = useState<SecurityLogItem[]>(() => authService.getSecurityLogs());
+
+  // Menu Permissions Matrix State
+  const [menuPermissions, setMenuPermissions] = useState<RoleMenuPermissions>(() =>
+    storageService.getMenuPermissions()
+  );
+  const [menuMatrixFeedback, setMenuMatrixFeedback] = useState<string | null>(null);
 
   // Filter & Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -117,7 +133,39 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
     setDirectory(authService.getDirectory());
     setDefaultPasswords(authService.getDefaultPasswordConfig());
     setSecurityLogs(authService.getSecurityLogs());
+    setMenuPermissions(storageService.getMenuPermissions());
     if (onRefreshDirectory) onRefreshDirectory();
+  };
+
+  const handleToggleMenuPermission = (role: UserRole, tab: ViewTab) => {
+    setMenuPermissions((prev) => {
+      const currentAllowed = prev[role] || DEFAULT_ROLE_MENU_PERMISSIONS[role] || [];
+      const isCurrentlyAllowed = currentAllowed.includes(tab);
+      const updatedAllowed = isCurrentlyAllowed
+        ? currentAllowed.filter((t) => t !== tab)
+        : [...currentAllowed, tab];
+      return {
+        ...prev,
+        [role]: updatedAllowed,
+      };
+    });
+  };
+
+  const handleSaveMenuPermissions = () => {
+    storageService.saveMenuPermissions(menuPermissions);
+    setMenuMatrixFeedback('Pengaturan izin menu berhasil disimpan dan diterapkan langsung ke sistem!');
+    setTimeout(() => setMenuMatrixFeedback(null), 4000);
+    if (onRefreshDirectory) onRefreshDirectory();
+  };
+
+  const handleResetMenuPermissions = () => {
+    if (window.confirm('Kembalikan seluruh checklist hak akses menu ke pengaturan default bawaan sistem?')) {
+      const reset = storageService.resetMenuPermissions();
+      setMenuPermissions(reset);
+      setMenuMatrixFeedback('Checklist menu berhasil dikembalikan ke standar rekomendasi bawaan.');
+      setTimeout(() => setMenuMatrixFeedback(null), 4000);
+      if (onRefreshDirectory) onRefreshDirectory();
+    }
   };
 
   // Filtered Whitelist
@@ -486,6 +534,24 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
           <span>Matriks & Pengaturan Izin Peran</span>
         </button>
 
+        {/* Tab Baru: Checklist Hak Akses Menu Dinamis */}
+        <button
+          onClick={() => setSubTab('menu_matrix')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+            subTab === 'menu_matrix'
+              ? 'bg-[#E30000] text-white shadow-md shadow-red-950/40 font-bold'
+              : isDarkMode
+              ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <CheckSquare className="w-4 h-4" />
+          <span>Checklist Hak Akses Menu</span>
+          <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+            Dinamis
+          </span>
+        </button>
+
         <button
           onClick={() => setSubTab('whitelist')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
@@ -542,6 +608,22 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
           <span>Log Audit Keamanan ({securityLogs.length})</span>
         </button>
       </div>
+
+      {/* Menu Matrix Feedback Banner */}
+      {menuMatrixFeedback && (
+        <div className="p-3.5 rounded-xl bg-emerald-950/90 border border-emerald-800 text-emerald-200 text-xs font-semibold flex items-center justify-between shadow-lg animate-in fade-in">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{menuMatrixFeedback}</span>
+          </div>
+          <button
+            onClick={() => setMenuMatrixFeedback(null)}
+            className="text-emerald-400 hover:text-white p-1 cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Role Change Feedback Banner */}
       {roleChangeFeedback && (
@@ -733,6 +815,240 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Subtab: Dynamic Role Menu Permissions Checklist Matrix */}
+      {subTab === 'menu_matrix' && (
+        <div className="space-y-6">
+          {/* Header & Explanation Card */}
+          <div className={`p-5 rounded-2xl border ${
+            isDarkMode ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'
+          } shadow-lg space-y-4`}>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className={`font-bold text-sm sm:text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    Matriks Checklist Hak Akses Menu Navigasi
+                  </h3>
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold">
+                    Tersimpan Otomatis / Fleksibel
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-1 max-w-3xl leading-relaxed">
+                  Centang (checklist) menu apa saja yang diizinkan tampil untuk setiap peran. Pengguna dengan peran terkait hanya akan melihat menu yang dicentang pada <b>Desktop Sidebar</b> maupun <b>Mobile Drawer</b>. Perubahan dapat langsung disimpan tanpa perlu mengubah kode sumber.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleResetMenuPermissions}
+                  className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border transition-colors cursor-pointer ${
+                    isDarkMode
+                      ? 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border-slate-700'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                  }`}
+                  title="Kembalikan semua centang ke standar bawaan"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reset Default</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSaveMenuPermissions}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-[#E30000] hover:bg-[#c00000] text-white font-bold text-xs rounded-xl shadow-md shadow-red-950/40 cursor-pointer transition-colors"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Simpan Perubahan</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Privilege Notice */}
+            <div className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 ${
+              isDarkMode ? 'bg-amber-950/30 border-amber-800/50 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-800'
+            }`}>
+              <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+              <div>
+                <span className="font-bold">Keamanan Khusus:</span> Halaman pengaturan ini hanya dapat dibuka dan diatur oleh peran <b>Project Manager / Site Engineer</b>, <b>Web Developer</b>, dan <b>Admin</b>. Staf biasa, vendor lapangan, atau klien tidak memiliki akses ke tab ini.
+              </div>
+            </div>
+          </div>
+
+          {/* Checklist Matrix Table */}
+          <div className={`rounded-2xl border overflow-hidden shadow-xl ${
+            isDarkMode ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'
+          }`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className={`border-b text-[11px] font-bold uppercase tracking-wider ${
+                  isDarkMode ? 'bg-slate-900/90 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
+                }`}>
+                  <tr>
+                    <th className="py-3.5 px-4 min-w-[220px] sticky left-0 z-10 backdrop-blur-md">
+                      Peran Pengguna (Role)
+                    </th>
+                    <th className="py-3.5 px-3 text-center min-w-[110px]">
+                      <div className="flex flex-col items-center gap-1">
+                        <Kanban className="w-4 h-4 text-red-500" />
+                        <span>Content Board</span>
+                      </div>
+                    </th>
+                    <th className="py-3.5 px-3 text-center min-w-[110px]">
+                      <div className="flex flex-col items-center gap-1">
+                        <Calendar className="w-4 h-4 text-emerald-500" />
+                        <span>Kalender</span>
+                      </div>
+                    </th>
+                    <th className="py-3.5 px-3 text-center min-w-[110px]">
+                      <div className="flex flex-col items-center gap-1">
+                        <BarChart3 className="w-4 h-4 text-blue-500" />
+                        <span>Dashboard</span>
+                      </div>
+                    </th>
+                    <th className="py-3.5 px-3 text-center min-w-[110px]">
+                      <div className="flex flex-col items-center gap-1">
+                        <History className="w-4 h-4 text-amber-500" />
+                        <span>Aktivitas</span>
+                      </div>
+                    </th>
+                    <th className="py-3.5 px-3 text-center min-w-[120px]">
+                      <div className="flex flex-col items-center gap-1">
+                        <Users className="w-4 h-4 text-sky-500" />
+                        <span>Database Staf</span>
+                      </div>
+                    </th>
+                    <th className="py-3.5 px-3 text-center min-w-[110px]">
+                      <div className="flex flex-col items-center gap-1">
+                        <CreditCard className="w-4 h-4 text-purple-500" />
+                        <span>Rate Card</span>
+                      </div>
+                    </th>
+                    <th className="py-3.5 px-3 text-center min-w-[130px]">
+                      <div className="flex flex-col items-center gap-1">
+                        <Sliders className="w-4 h-4 text-red-500" />
+                        <span>Pengaturan Peran</span>
+                      </div>
+                    </th>
+                    <th className="py-3.5 px-3 text-center min-w-[110px]">
+                      <div className="flex flex-col items-center gap-1">
+                        <Cpu className="w-4 h-4 text-emerald-500" />
+                        <span>Headless GAS</span>
+                      </div>
+                    </th>
+                    <th className="py-3.5 px-3 text-center min-w-[120px]">
+                      <div className="flex flex-col items-center gap-1">
+                        <BookOpen className="w-4 h-4 text-amber-500" />
+                        <span>Panduan PDF</span>
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800 text-slate-300' : 'divide-slate-200 text-slate-700'}`}>
+                  {(
+                    [
+                      'project_manager',
+                      'site_engineer',
+                      'web_developer',
+                      'admin',
+                      'staff_creator',
+                      'vendor_lapangan',
+                      'client',
+                    ] as UserRole[]
+                  ).map((roleKey) => {
+                    const role = ROLES[roleKey];
+                    const countMembers = directory.filter((u) => u.role === roleKey).length;
+                    const allowedTabs = menuPermissions[roleKey] || DEFAULT_ROLE_MENU_PERMISSIONS[roleKey] || [];
+
+                    const menuTabs: { tab: ViewTab; label: string }[] = [
+                      { tab: 'board', label: 'Content Board' },
+                      { tab: 'calendar', label: 'Kalender' },
+                      { tab: 'dashboard', label: 'Dashboard & Fee' },
+                      { tab: 'activity', label: 'Aktivitas & Log' },
+                      { tab: 'staff_database', label: 'Database Tim & Staf' },
+                      { tab: 'ratecard', label: 'Rate Card Fee' },
+                      { tab: 'access_settings', label: 'Pengaturan Peran' },
+                      { tab: 'headless_gas', label: 'Headless GAS' },
+                      { tab: 'developer_docs', label: 'Panduan Sistem (PDF)' },
+                    ];
+
+                    return (
+                      <tr
+                        key={roleKey}
+                        className={`${
+                          isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'
+                        } transition-colors`}
+                      >
+                        {/* Role Column */}
+                        <td className={`py-4 px-4 sticky left-0 z-10 font-medium ${
+                          isDarkMode ? 'bg-[#0f172a]' : 'bg-white'
+                        }`}>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${
+                              role?.badgeColor || 'bg-slate-500/10 text-slate-400 border-slate-500/30'
+                            }`}>
+                              {role?.label || roleKey}
+                            </span>
+                            <span className="text-[11px] text-slate-400 font-mono">
+                              ({countMembers} staf)
+                            </span>
+                          </div>
+                          <div className="text-xs font-bold text-slate-200 mt-1">
+                            {role?.title || roleKey}
+                          </div>
+                          <div className="text-[10px] text-slate-400 line-clamp-1">
+                            {role?.description}
+                          </div>
+                        </td>
+
+                        {/* Checklist Checkboxes */}
+                        {menuTabs.map(({ tab, label }) => {
+                          const isChecked = allowedTabs.includes(tab);
+
+                          return (
+                            <td key={tab} className="py-4 px-3 text-center align-middle">
+                              <label className="inline-flex items-center justify-center cursor-pointer p-1 rounded-lg hover:bg-slate-500/10 transition-colors">
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => handleToggleMenuPermission(roleKey, tab)}
+                                  className="w-4 h-4 rounded border-slate-700 text-red-600 focus:ring-red-500 focus:ring-offset-0 cursor-pointer accent-[#E30000]"
+                                  title={`Izinkan menu "${label}" untuk ${role?.title || roleKey}`}
+                                />
+                              </label>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Bottom Actions Bar */}
+            <div className={`p-4 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
+              isDarkMode ? 'bg-slate-900/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
+            }`}>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>
+                  Centang kotak untuk menampilkan menu, hilangkan centang untuk menyembunyikan menu pada peran tersebut.
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleSaveMenuPermissions}
+                  className="w-full sm:w-auto px-4 py-2 bg-[#E30000] hover:bg-[#c00000] text-white font-bold rounded-xl shadow-md cursor-pointer transition-colors"
+                >
+                  Simpan Hak Akses Menu
+                </button>
+              </div>
             </div>
           </div>
         </div>

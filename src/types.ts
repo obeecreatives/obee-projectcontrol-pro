@@ -190,3 +190,54 @@ export interface KpiTargets {
   targetSlaDays: number;
   onTimeGoalPercent: number;
 }
+
+export type RoleMenuPermissions = Record<UserRole, ViewTab[]>;
+
+export const DEFAULT_ROLE_MENU_PERMISSIONS: RoleMenuPermissions = {
+  project_manager: [
+    'board',
+    'calendar',
+    'dashboard',
+    'activity',
+    'staff_database',
+    'ratecard',
+    'access_settings',
+    'headless_gas',
+    'developer_docs',
+  ],
+  site_engineer: [
+    'board',
+    'calendar',
+    'dashboard',
+    'activity',
+    'staff_database',
+    'ratecard',
+    'access_settings',
+    'headless_gas',
+    'developer_docs',
+  ],
+  web_developer: [
+    'board',
+    'calendar',
+    'dashboard',
+    'activity',
+    'staff_database',
+    'ratecard',
+    'access_settings',
+    'headless_gas',
+    'developer_docs',
+  ],
+  admin: [
+    'board',
+    'calendar',
+    'dashboard',
+    'activity',
+    'staff_database',
+    'ratecard',
+    'access_settings',
+    'developer_docs',
+  ],
+  staff_creator: ['board', 'calendar', 'dashboard', 'activity'],
+  vendor_lapangan: ['board', 'calendar', 'activity'],
+  client: ['board', 'calendar'],
+};

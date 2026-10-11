@@ -67,6 +67,7 @@ export default function App() {
     return user ? user.name : storageService.getIdentity();
   });
   const [gasUrl, setGasUrl] = useState<string>(() => storageService.getGasUrl());
+  const [menuPermissionsVersion, setMenuPermissionsVersion] = useState<number>(0);
 
   // Dark Mode State
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -265,11 +266,19 @@ export default function App() {
   };
 
   const isDevOrEngineer = (role: UserRole) => ['project_manager', 'site_engineer', 'web_developer'].includes(role);
+  const isManagementOrAdmin = (role: UserRole) => ['project_manager', 'site_engineer', 'web_developer', 'admin'].includes(role);
+
+  // Automatically reset tab if current role has no access to it based on dynamic menu permissions
+  useEffect(() => {
+    if (!storageService.isTabAllowedForRole(activeRole, currentTab)) {
+      setCurrentTab('board');
+    }
+  }, [activeRole, currentTab]);
 
   const handleSelectRole = (role: UserRole) => {
     storageService.setRole(role);
     setActiveRole(role);
-    if (!isDevOrEngineer(role) && currentTab === 'headless_gas') {
+    if (!storageService.isTabAllowedForRole(role, currentTab)) {
       setCurrentTab('board');
     }
     addToast(`Peran diganti ke: ${ROLES[role].title}`, 'info');
@@ -331,7 +340,7 @@ export default function App() {
     setIdentityName(user.name);
     storageService.setRole(user.role);
     storageService.setIdentity(user.name);
-    if (!isDevOrEngineer(user.role) && currentTab === 'headless_gas') {
+    if (!storageService.isTabAllowedForRole(user.role, currentTab)) {
       setCurrentTab('board');
     }
     addToast(`Selamat datang, ${user.name}! (${user.jabatan})`, 'success');
@@ -414,6 +423,7 @@ export default function App() {
     <div className={`min-h-screen ${isDarkMode ? 'bg-[#0b0f17] text-slate-100' : 'bg-[#f8fafc] text-slate-900'} flex antialiased selection:bg-red-500 selection:text-white pb-20 lg:pb-0 transition-colors`}>
       {/* Collapsible Sidebar for Desktop */}
       <Sidebar
+        key={`sidebar-nav-${menuPermissionsVersion}`}
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
         isCollapsed={isSidebarCollapsed}
@@ -496,14 +506,32 @@ export default function App() {
           )}
 
           {currentTab === 'staff_database' && (
-            <StaffDatabaseView
-              contentItems={items}
-              activeRole={activeRole}
-              onRefreshData={() => {
-                setItems(storageService.getContent());
-              }}
-              isDarkMode={isDarkMode}
-            />
+            isManagementOrAdmin(activeRole) ? (
+              <StaffDatabaseView
+                contentItems={items}
+                activeRole={activeRole}
+                onRefreshData={() => {
+                  setItems(storageService.getContent());
+                }}
+                isDarkMode={isDarkMode}
+              />
+            ) : (
+              <div className={`${isDarkMode ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-8 text-center max-w-md mx-auto my-12 shadow-xl`}>
+                <div className="w-12 h-12 rounded-2xl bg-sky-950/60 border border-sky-800/40 text-sky-500 flex items-center justify-center mx-auto mb-4">
+                  <Lock className="w-6 h-6" />
+                </div>
+                <h3 className={`text-base font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Akses Database Tim & Staf Dibatasi</h3>
+                <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                  Database Tim & Staf hanya dapat diakses dan dikelola oleh <b>Admin (Project Manager)</b> dan <b>Site Engineer</b>.
+                </p>
+                <button
+                  onClick={() => setCurrentTab('board')}
+                  className={`mt-5 px-4 py-2 ${isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'} text-xs font-semibold rounded-xl border transition-colors cursor-pointer`}
+                >
+                  Kembali ke Content Board
+                </button>
+              </div>
+            )
           )}
 
           {currentTab === 'ratecard' && (
@@ -566,14 +594,32 @@ export default function App() {
             )
           )}
           {currentTab === 'access_settings' && (
-            <AccessSettingsView
-              currentUser={currentUser}
-              activeRole={activeRole}
-              isDarkMode={isDarkMode}
-              onRefreshDirectory={() => {
-                // Keep directory in sync
-              }}
-            />
+            isManagementOrAdmin(activeRole) ? (
+              <AccessSettingsView
+                currentUser={currentUser}
+                activeRole={activeRole}
+                isDarkMode={isDarkMode}
+                onRefreshDirectory={() => {
+                  setMenuPermissionsVersion((v) => v + 1);
+                }}
+              />
+            ) : (
+              <div className={`${isDarkMode ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-8 text-center max-w-md mx-auto my-12 shadow-xl`}>
+                <div className="w-12 h-12 rounded-2xl bg-red-950/60 border border-red-800/40 text-red-500 flex items-center justify-center mx-auto mb-4">
+                  <Lock className="w-6 h-6" />
+                </div>
+                <h3 className={`text-base font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Akses Pengaturan Peran Dibatasi</h3>
+                <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                  Menu Pengaturan Peran dan Hak Akses RBAC hanya dapat diakses oleh <b>Admin (Project Manager)</b> dan <b>Site Engineer</b>.
+                </p>
+                <button
+                  onClick={() => setCurrentTab('board')}
+                  className={`mt-5 px-4 py-2 ${isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'} text-xs font-semibold rounded-xl border transition-colors cursor-pointer`}
+                >
+                  Kembali ke Content Board
+                </button>
+              </div>
+            )
           )}
           {currentTab === 'developer_docs' && (
             ['project_manager', 'web_developer', 'admin'].includes(activeRole) ? (
@@ -623,7 +669,7 @@ export default function App() {
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs">
-              {roleConfig.canEditRateCard && (
+              {storageService.isTabAllowedForRole(activeRole, 'staff_database') && (
                 <button
                   onClick={() => {
                     setCurrentTab('staff_database');
@@ -636,7 +682,7 @@ export default function App() {
                 </button>
               )}
 
-              {roleConfig.canEditRateCard && (
+              {storageService.isTabAllowedForRole(activeRole, 'ratecard') && (
                 <button
                   onClick={() => {
                     setCurrentTab('ratecard');
@@ -649,7 +695,7 @@ export default function App() {
                 </button>
               )}
 
-              {(['project_manager', 'site_engineer', 'web_developer', 'admin'].includes(activeRole) || roleConfig.canEditRateCard) && (
+              {storageService.isTabAllowedForRole(activeRole, 'access_settings') && (
                 <button
                   onClick={() => {
                     setCurrentTab('access_settings');
@@ -673,7 +719,7 @@ export default function App() {
                 <span>Link Utama</span>
               </button>
 
-              {isDevOrEngineer(activeRole) && (
+              {storageService.isTabAllowedForRole(activeRole, 'headless_gas') && (
                 <button
                   onClick={() => {
                     setCurrentTab('headless_gas');
@@ -686,7 +732,7 @@ export default function App() {
                 </button>
               )}
 
-              {['project_manager', 'web_developer', 'admin'].includes(activeRole) && (
+              {storageService.isTabAllowedForRole(activeRole, 'developer_docs') && (
                 <button
                   onClick={() => {
                     setCurrentTab('developer_docs');
