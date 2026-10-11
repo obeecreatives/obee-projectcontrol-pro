@@ -21,6 +21,7 @@ import {
   Coffee,
   PanelLeftClose,
   PanelLeftOpen,
+  ChevronLeft,
   ChevronRight,
   Sun,
   Moon,
@@ -160,47 +161,65 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className={`sticky top-0 z-20 ${isDarkMode ? 'bg-[#0f172a]/95 border-slate-800 text-slate-100' : 'bg-white/95 border-slate-200 text-slate-800'} backdrop-blur-md border-b transition-colors`}>
       <div className="w-full px-3 sm:px-5 h-16 flex items-center justify-between gap-2 sm:gap-3">
-        {/* Left Section */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {/* Mobile Brand Button */}
-          <div className="flex lg:hidden items-center gap-1.5">
-            <button
-              onClick={() => onSelectTab('board')}
-              className="flex items-baseline text-left group focus:outline-none"
-            >
-              <span className={`text-lg font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>obee</span>
-              <span className="text-lg font-black tracking-tight text-[#E30000] ml-0.5">creatives</span>
-            </button>
-            <span className={`px-1 py-0.5 rounded text-[9px] font-bold ${isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'} border`}>
-              OS
-            </span>
+        {/* Left Section: Full-Width Brand Title & Navigation Controls */}
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+          {/* Brand Logo & Title (Tetap di posisi ini dan tidak ikut diciutkan) */}
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            {/* Red Ring Icon */}
+            <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0 shadow-inner">
+              <div className="w-6 h-6 rounded-full border-[3px] border-[#E30000] flex items-center justify-center shadow-sm">
+                <div className="w-2 h-2 rounded-full bg-[#E30000]/30" />
+              </div>
+            </div>
+
+            <div className="flex flex-col min-w-0">
+              <button
+                onClick={() => onSelectTab('board')}
+                className="flex items-baseline text-left focus:outline-none group cursor-pointer"
+                title="obeecreatives Workspace OS"
+              >
+                <span className={`text-[17px] sm:text-[19px] font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'} transition-colors`}>
+                  obee
+                </span>
+                <span className="text-[17px] sm:text-[19px] font-black tracking-tight text-[#E30000] ml-1">
+                  creatives
+                </span>
+              </button>
+              <div className="text-[9px] sm:text-[10px] font-bold text-sky-400 tracking-wider uppercase -mt-0.5">
+                CRM &bull; WORKSPACE OS
+              </div>
+            </div>
           </div>
 
-          {/* Desktop Breadcrumb & Sidebar Toggle */}
-          <div className="hidden lg:flex items-center gap-2.5">
-            {onToggleSidebar && (
-              <button
-                onClick={onToggleSidebar}
-                className={`p-1.5 rounded-lg ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800 hover:border-slate-700' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 hover:border-slate-300'} transition-colors border border-transparent`}
-                title={isSidebarCollapsed ? 'Buka Sidebar' : 'Tutup Sidebar'}
-              >
-                {isSidebarCollapsed ? (
-                  <PanelLeftOpen className="w-4 h-4" />
-                ) : (
-                  <PanelLeftClose className="w-4 h-4" />
-                )}
-              </button>
-            )}
+          {/* Sidebar Toggle Collapse Button (Hanya menciutkan sidebar di bawahnya) */}
+          {onToggleSidebar && (
+            <button
+              onClick={onToggleSidebar}
+              className={`hidden lg:flex items-center justify-center w-8 h-8 rounded-xl border transition-colors cursor-pointer ml-0.5 ${
+                isDarkMode
+                  ? 'bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white border-slate-800'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border-slate-300'
+              }`}
+              title={isSidebarCollapsed ? 'Perluas Sidebar' : 'Ciutkan Sidebar'}
+            >
+              {isSidebarCollapsed ? (
+                <ChevronRight className="w-4 h-4" />
+              ) : (
+                <ChevronLeft className="w-4 h-4" />
+              )}
+            </button>
+          )}
 
-            <div className={`h-4 w-px ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200'}`} />
+          {/* Divider */}
+          <div className={`hidden lg:block h-6 w-px ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200'} mx-0.5`} />
 
-            <div className="flex items-center gap-2 text-sm">
-              <span className={`${isDarkMode ? 'text-slate-400' : 'text-slate-500'} font-medium`}>obeecreatives</span>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
-              <div className={`flex items-center gap-1.5 font-bold ${isDarkMode ? 'text-white bg-slate-800/60 border-slate-700/50' : 'text-slate-900 bg-slate-100 border-slate-300/80'} border px-2.5 py-1 rounded-lg`}>
-                {currentTabInfo.icon}
-                <span>{currentTabInfo.title}</span>
-              </div>
+          {/* Desktop Breadcrumbs */}
+          <div className="hidden lg:flex items-center gap-2 text-sm">
+            <span className={`${isDarkMode ? 'text-slate-400' : 'text-slate-500'} font-medium`}>obeecreatives</span>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+            <div className={`flex items-center gap-1.5 font-bold ${isDarkMode ? 'text-white bg-slate-800/60 border-slate-700/50' : 'text-slate-900 bg-slate-100 border-slate-300/80'} border px-2.5 py-1 rounded-lg`}>
+              {currentTabInfo.icon}
+              <span>{currentTabInfo.title}</span>
             </div>
           </div>
         </div>

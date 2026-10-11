@@ -117,69 +117,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside
       className={`hidden lg:flex flex-col ${
         isDarkMode ? 'bg-[#070d19] border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-800'
-      } border-r transition-all duration-300 ease-in-out shrink-0 select-none z-30 sticky top-0 h-screen ${
+      } border-r transition-all duration-300 ease-in-out shrink-0 select-none z-10 h-full ${
         isCollapsed ? 'w-[76px]' : 'w-72'
       }`}
     >
-      {/* Brand Header */}
-      <div className={`h-[72px] border-b ${isDarkMode ? 'border-slate-800/80 bg-[#070d19]' : 'border-slate-200 bg-white'} flex items-center px-4 justify-between gap-2 shrink-0`}>
+      {/* Quick Switch App Bar */}
+      <div className="px-2.5 pt-3 pb-1 shrink-0">
         {!isCollapsed ? (
-          <div className="flex items-center gap-3 overflow-hidden">
-            {/* Red Ring Icon from Screenshot */}
-            <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0 shadow-inner">
-              <div className="w-6 h-6 rounded-full border-[3px] border-[#E30000] flex items-center justify-center shadow-sm">
-                <div className="w-2 h-2 rounded-full bg-[#E30000]/30" />
-              </div>
-            </div>
-
-            <div className="flex flex-col min-w-0">
-              <button
-                onClick={() => onSelectTab('board')}
-                className="flex items-baseline text-left focus:outline-none group"
-              >
-                <span className={`text-[19px] font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'} transition-colors`}>
-                  obee
-                </span>
-                <span className="text-[19px] font-black tracking-tight text-[#E30000] ml-1">
-                  creatives
-                </span>
-              </button>
-              <div className="text-[10px] font-bold text-sky-400 tracking-wider uppercase -mt-0.5">
-                CRM &bull; WORKSPACE OS
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="mx-auto">
-            <button
-              onClick={() => onSelectTab('board')}
-              className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center hover:scale-105 transition-transform"
-              title="obeecreatives Workspace OS"
-            >
-              <div className="w-6 h-6 rounded-full border-[3px] border-[#E30000] flex items-center justify-center" />
-            </button>
-          </div>
-        )}
-
-        {/* Toggle Collapse Button */}
-        <button
-          onClick={onToggleCollapse}
-          className={`p-2 rounded-xl ${
-            isDarkMode
-              ? 'bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800'
-              : 'bg-slate-200/80 hover:bg-slate-300 text-slate-600 hover:text-slate-900 border border-slate-300'
-          } transition-colors cursor-pointer ${
-            isCollapsed ? 'hidden' : 'block'
-          }`}
-          title={isCollapsed ? 'Perluas Sidebar' : 'Ciutkan Sidebar'}
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* Quick Switch App Bar (Inspired by Screenshot) */}
-      {!isCollapsed && (
-        <div className="px-3 pt-3 pb-1">
           <div className={`flex items-center justify-between px-3 py-2 rounded-xl ${
             isDarkMode ? 'bg-slate-900/70 border-slate-800 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-800'
           } border text-xs font-semibold shadow-xs`}>
@@ -193,8 +137,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
               OS
             </span>
           </div>
-        </div>
-      )}
+        ) : (
+          <div
+            className={`flex items-center justify-center p-2.5 rounded-xl ${
+              isDarkMode ? 'bg-slate-900/70 border-slate-800 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
+            } border shadow-xs`}
+            title="Switch App (OS)"
+          >
+            <Layers className="w-4 h-4 text-red-500" />
+          </div>
+        )}
+      </div>
 
       {/* Navigation List with Enriched Large Fonts */}
       <div className="flex-1 overflow-y-auto px-3 py-2.5 space-y-1.5">

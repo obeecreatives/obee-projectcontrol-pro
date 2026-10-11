@@ -420,47 +420,47 @@ export default function App() {
   const roleConfig = ROLES[activeRole] || ROLES.project_manager;
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'bg-[#0b0f17] text-slate-100' : 'bg-[#f8fafc] text-slate-900'} flex antialiased selection:bg-red-500 selection:text-white pb-20 lg:pb-0 transition-colors`}>
-      {/* Collapsible Sidebar for Desktop */}
-      <Sidebar
-        key={`sidebar-nav-${menuPermissionsVersion}`}
+    <div className={`h-screen flex flex-col ${isDarkMode ? 'bg-[#0b0f17] text-slate-100' : 'bg-[#f8fafc] text-slate-900'} antialiased selection:bg-red-500 selection:text-white transition-colors overflow-hidden`}>
+      {/* 1. Full-Width Global Topbar / Header Layout (Header Penuh di Atas) */}
+      <Navbar
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
-        isCollapsed={isSidebarCollapsed}
-        onToggleCollapse={handleToggleSidebar}
         activeRole={activeRole}
-        onOpenLinksModal={() => setIsLinksModalOpen(true)}
+        onOpenRoleModal={() => setIsRoleModalOpen(true)}
+        identityName={identityName}
+        onOpenIdentityModal={() => setIsIdentityModalOpen(true)}
         onOpenNewContentModal={handleOpenNewContentModal}
+        onOpenLinksModal={() => setIsLinksModalOpen(true)}
+        currentUser={currentUser}
+        onLogout={handleLogout}
+        onOpenWorkModeModal={() => setIsWorkModeModalOpen(true)}
+        currentWorkMode={currentWorkMode}
+        isSidebarCollapsed={isSidebarCollapsed}
+        onToggleSidebar={handleToggleSidebar}
         isDarkMode={isDarkMode}
+        onToggleTheme={handleToggleTheme}
+        onSyncAll={handleSyncAllData}
+        isSyncing={isGlobalSyncing}
+        onOpenSyncModal={() => setIsSyncModalOpen(true)}
       />
 
-      {/* Main Workspace Area (Top Navbar + Content Viewport) */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto overflow-x-hidden">
-        {/* Top Navbar Header */}
-        <Navbar
+      {/* 2. Workspace Body Container (Sidebar di Bawah Header + Main Viewport) */}
+      <div className="flex flex-1 min-h-0 overflow-hidden relative pb-16 lg:pb-0">
+        {/* Collapsible Sidebar (Hanya sidebar ini yang diciutkan/diperluas) */}
+        <Sidebar
+          key={`sidebar-nav-${menuPermissionsVersion}`}
           currentTab={currentTab}
           onSelectTab={setCurrentTab}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={handleToggleSidebar}
           activeRole={activeRole}
-          onOpenRoleModal={() => setIsRoleModalOpen(true)}
-          identityName={identityName}
-          onOpenIdentityModal={() => setIsIdentityModalOpen(true)}
-          onOpenNewContentModal={handleOpenNewContentModal}
           onOpenLinksModal={() => setIsLinksModalOpen(true)}
-          currentUser={currentUser}
-          onLogout={handleLogout}
-          onOpenWorkModeModal={() => setIsWorkModeModalOpen(true)}
-          currentWorkMode={currentWorkMode}
-          isSidebarCollapsed={isSidebarCollapsed}
-          onToggleSidebar={handleToggleSidebar}
+          onOpenNewContentModal={handleOpenNewContentModal}
           isDarkMode={isDarkMode}
-          onToggleTheme={handleToggleTheme}
-          onSyncAll={handleSyncAllData}
-          isSyncing={isGlobalSyncing}
-          onOpenSyncModal={() => setIsSyncModalOpen(true)}
         />
 
         {/* Main Viewport Container */}
-        <main className="flex-1 w-full max-w-full px-2.5 sm:px-6 py-4 sm:py-6 overflow-x-hidden">
+        <main className="flex-1 min-w-0 h-full overflow-y-auto overflow-x-hidden px-2.5 sm:px-6 py-4 sm:py-6">
           {currentTab === 'board' && (
             <KanbanBoard
               items={items}
