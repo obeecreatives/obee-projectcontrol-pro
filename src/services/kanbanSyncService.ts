@@ -337,8 +337,7 @@ export class KanbanSyncService {
             return true;
           }
         } catch {
-          // If response not JSON but HTTP OK, still consider delivered
-          return true;
+          // Response is not JSON (e.g. HTML error/redirect) - do not assume delivered
         }
       }
 
@@ -353,7 +352,14 @@ export class KanbanSyncService {
             body: payloadBody,
           }),
         });
-        if (proxyRes.ok) return true;
+        if (proxyRes.ok) {
+          try {
+            const proxyJson = await proxyRes.json();
+            if (proxyJson.success !== false) return true;
+          } catch {
+            return false;
+          }
+        }
       } catch {}
 
       return false;
@@ -370,7 +376,14 @@ export class KanbanSyncService {
             body: payloadBody,
           }),
         });
-        if (proxyRes.ok) return true;
+        if (proxyRes.ok) {
+          try {
+            const proxyJson = await proxyRes.json();
+            if (proxyJson.success !== false) return true;
+          } catch {
+            return false;
+          }
+        }
       } catch {}
 
       return false;

@@ -179,6 +179,8 @@ export default function App() {
   };
 
   // Content Operations (Optimistic UI 0.01s + Full 2-Way Push to Spreadsheet)
+  const [highlightedCardId, setHighlightedCardId] = useState<string | null>(null);
+
   const handleSaveContent = (itemData: Partial<ContentItem>) => {
     const res = storageService.saveContentItem(itemData);
     if (res.success) {
@@ -190,8 +192,14 @@ export default function App() {
       const savedCard = allCards.find((c) => c.ID === res.id) || (itemData as ContentItem);
       kanbanSyncService.queueCardUpsert(savedCard);
 
+      // Highlight the saved card on Kanban board
+      setHighlightedCardId(res.id);
+      setTimeout(() => setHighlightedCardId(null), 6000);
+
       addToast(
-        itemData.ID ? 'Konten diperbarui & otomatis tersinkron ke Spreadsheet' : 'Konten baru ditambahkan & tersinkron ke Spreadsheet',
+        itemData.ID
+          ? 'Konten diperbarui & otomatis tersinkron ke Spreadsheet'
+          : 'Konten baru berhasil disimpan dan siap dikerjakan!',
         'success'
       );
     }
@@ -476,6 +484,7 @@ export default function App() {
               kanbanSyncState={kanbanSyncState}
               onTriggerSync={handleTriggerTwoWaySync}
               onOpenSyncModal={() => setIsSyncModalOpen(true)}
+              highlightedCardId={highlightedCardId}
             />
           )}
 

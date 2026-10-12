@@ -25,6 +25,7 @@ interface ContentCardProps {
   onToggleChecklist: (id: string, field: 'ChecklistAsset' | 'ChecklistCaption', value: boolean) => void;
   isDarkMode?: boolean;
   currentUser?: StaffUser | null;
+  isHighlighted?: boolean;
 }
 
 const ALL_STATUS_OPTIONS: StatusType[] = [
@@ -46,6 +47,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   onToggleChecklist,
   isDarkMode = true,
   currentUser,
+  isHighlighted = false,
 }) => {
   const roleConfig = ROLES[activeRole] || ROLES.project_manager;
   const isInternal = item.TipeProject === 'Internal';
@@ -128,11 +130,22 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     <div
       onClick={handleCardClick}
       className={`${
+        isHighlighted
+          ? 'ring-2 ring-emerald-500 shadow-lg shadow-emerald-500/20 animate-pulse'
+          : ''
+      } ${
         isDarkMode
           ? 'bg-[#1e293b]/90 hover:bg-[#1e293b] border-slate-700/80 shadow-black/40'
           : 'bg-white hover:bg-slate-50 border-slate-200 shadow-slate-200/50'
       } border rounded-xl p-2.5 shadow-sm transition-all duration-150 flex flex-col gap-2 cursor-pointer hover:border-red-500/40 relative group`}
     >
+      {/* Newly created highlight badge */}
+      {isHighlighted && (
+        <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-[10px] font-bold tracking-tight shadow-sm self-start">
+          <span>✨ Baru Ditambahkan</span>
+        </div>
+      )}
+
       {/* Mentioned Notification Alert Tag */}
       {isMentionedForMe && (
         <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-red-600/90 text-white text-[10px] font-bold tracking-tight shadow-sm self-start">

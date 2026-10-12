@@ -34,6 +34,7 @@ interface KanbanBoardProps {
   kanbanSyncState?: KanbanSyncState;
   onTriggerSync?: () => void;
   onOpenSyncModal?: () => void;
+  highlightedCardId?: string | null;
 }
 
 const COLUMNS: { id: StatusType; label: string; color: string; dotColor: string }[] = [
@@ -59,6 +60,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   kanbanSyncState,
   onTriggerSync,
   onOpenSyncModal,
+  highlightedCardId,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedKlien, setSelectedKlien] = useState<string>('ALL');
@@ -167,6 +169,18 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     selectedCreator !== 'ALL' ||
     Boolean(startDate) ||
     Boolean(endDate);
+
+  // Auto-reset filters if a newly saved card would otherwise be hidden by active filters
+  React.useEffect(() => {
+    if (!highlightedCardId) return;
+    const cardExists = items.some((it) => it.ID === highlightedCardId);
+    if (!cardExists) return;
+
+    const isVisibleInFilter = filteredItems.some((it) => it.ID === highlightedCardId);
+    if (!isVisibleInFilter && isFiltered) {
+      resetFilters();
+    }
+  }, [highlightedCardId, items, filteredItems, isFiltered]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -373,6 +387,30 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         </div>
       </div>
 
+      {/* Active Filter Notice Banner (Mencegah kebingungan jika kartu disembunyikan oleh filter) */}
+      {isFiltered && (
+        <div
+          className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border text-xs font-medium transition-colors ${
+            isDarkMode
+              ? 'bg-amber-950/40 border-amber-800/60 text-amber-200'
+              : 'bg-amber-50 border-amber-200 text-amber-800'
+          }`}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <Filter className="w-4 h-4 text-amber-400 shrink-0" />
+            <span className="truncate">
+              <b>Filter Aktif:</b> Menampilkan {filteredItems.length} dari {items.length} kartu. Beberapa kartu disembunyikan oleh filter saat ini.
+            </span>
+          </div>
+          <button
+            onClick={resetFilters}
+            className="underline hover:no-underline font-bold text-amber-400 hover:text-amber-300 shrink-0 cursor-pointer text-xs"
+          >
+            Reset Semua Filter
+          </button>
+        </div>
+      )}
+
       {/* Top Navigator Slider Bar (Visible when in Scroll Mode) */}
       {viewMode === 'scroll' && (
         <div className={`${isDarkMode ? 'bg-[#0f172a]/95 border-slate-800' : 'bg-white border-slate-200 shadow-sm'} border rounded-2xl p-2.5 sm:p-3 flex flex-col md:flex-row items-center justify-between gap-2.5 sm:gap-3 shadow-md transition-colors max-w-full overflow-hidden`}>
@@ -513,6 +551,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                       onToggleChecklist={onToggleChecklist}
                       isDarkMode={isDarkMode}
                       currentUser={currentUser}
+                      isHighlighted={item.ID === highlightedCardId}
                     />
                   ))
                 )}

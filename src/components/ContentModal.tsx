@@ -27,6 +27,7 @@ import {
   FileText,
   MessageCircle,
   Sparkles,
+  AlertCircle,
 } from 'lucide-react';
 import { AiAssistantModal, AiMode } from './AiAssistantModal';
 import {
@@ -122,6 +123,11 @@ export const ContentModal: React.FC<ContentModalProps> = ({
   const [checklistCaption, setChecklistCaption] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Form Validation & Lifecycle Guards
+  const [formValidationError, setFormValidationError] = useState<string | null>(null);
+  const prevIsOpenRef = useRef(false);
+  const prevEditingIdRef = useRef<string | undefined>(undefined);
+
   // Card Comments State (Trello-style discussion)
   const [commentsList, setCommentsList] = useState<CardComment[]>(editingItem?.comments || []);
   const [commentText, setCommentText] = useState('');
@@ -157,62 +163,77 @@ export const ContentModal: React.FC<ContentModalProps> = ({
   }, [commentsList, activeFilterCategory]);
 
   useEffect(() => {
-    if (editingItem) {
-      setTipeProject(editingItem.TipeProject || 'Komersil');
-      if (editingItem.TipeProject === 'Internal') {
-        if (KATEGORI_INTERNAL_OPTIONS.includes(editingItem.Klien)) {
-          setKlienInternal(editingItem.Klien);
-          setKlienInternalLainnya('');
-        } else {
-          setKlienInternal('Lainnya');
-          setKlienInternalLainnya(editingItem.Klien);
-        }
-      } else {
-        setKlien(editingItem.Klien || 'INOVASI PANGAN LESTARI');
-      }
-      setTanggalProduksi(editingItem.TanggalProduksi || '');
-      setJadwalPosting(editingItem.JadwalPosting || '');
-      setTema(editingItem.Tema || '');
-      setIdeKonten(editingItem.IdeKonten || '');
-      setDetail(editingItem.Detail || '');
-      setJenisKonten((editingItem.JenisKonten as JenisKontenType) || 'Single Post');
-      setCreator(editingItem.Creator || defaultCreator);
-      setProjectTools(editingItem.ProjectTools || 'Canva');
-      setStatus(editingItem.Status || 'New Idea');
-      setSourceReferences(editingItem.SourceReferences || '');
-      setMateriKonten(editingItem.MateriKonten || '');
-      setFile(editingItem.File || '');
-      setCatatan(editingItem.Catatan || '');
-      setChecklistAsset(!!editingItem.ChecklistAsset);
-      setChecklistCaption(!!editingItem.ChecklistCaption);
-      setCommentsList(editingItem.comments || []);
-    } else {
-      setTipeProject('Komersil');
-      setKlien('INOVASI PANGAN LESTARI');
-      setKlienInternal(KATEGORI_INTERNAL_OPTIONS[0]);
-      setKlienInternalLainnya('');
-      const todayIso = getTodayIndoDateString();
-      setTanggalProduksi(todayIso);
-      setJadwalPosting('');
-      setTema('');
-      setIdeKonten('');
-      setDetail('');
-      setJenisKonten('Single Post');
-      setCreator(defaultCreator);
-      setProjectTools('Canva');
-      setStatus('New Idea');
-      setSourceReferences('');
-      setMateriKonten('');
-      setFile('');
-      setCatatan('');
-      setChecklistAsset(false);
-      setChecklistCaption(false);
-      setCommentsList([]);
+    // Only initialize form fields when modal is freshly opened or switching target editing item
+    const justOpened = !prevIsOpenRef.current && isOpen;
+    const switchedItem = editingItem?.ID !== prevEditingIdRef.current;
+
+    prevIsOpenRef.current = isOpen;
+    prevEditingIdRef.current = editingItem?.ID;
+
+    if (!isOpen) {
+      setFormValidationError(null);
+      return;
     }
-    setActiveModalTab(editingItem && initialTab ? initialTab : 'detail');
-    setIsSubmitting(false);
-    setCommentText('');
-    setMentionQuery(null);
+
+    if (justOpened || switchedItem) {
+      setFormValidationError(null);
+      if (editingItem) {
+        setTipeProject(editingItem.TipeProject || 'Komersil');
+        if (editingItem.TipeProject === 'Internal') {
+          if (KATEGORI_INTERNAL_OPTIONS.includes(editingItem.Klien)) {
+            setKlienInternal(editingItem.Klien);
+            setKlienInternalLainnya('');
+          } else {
+            setKlienInternal('Lainnya');
+            setKlienInternalLainnya(editingItem.Klien);
+          }
+        } else {
+          setKlien(editingItem.Klien || 'INOVASI PANGAN LESTARI');
+        }
+        setTanggalProduksi(editingItem.TanggalProduksi || '');
+        setJadwalPosting(editingItem.JadwalPosting || '');
+        setTema(editingItem.Tema || '');
+        setIdeKonten(editingItem.IdeKonten || '');
+        setDetail(editingItem.Detail || '');
+        setJenisKonten((editingItem.JenisKonten as JenisKontenType) || 'Single Post');
+        setCreator(editingItem.Creator || defaultCreator);
+        setProjectTools(editingItem.ProjectTools || 'Canva');
+        setStatus(editingItem.Status || 'New Idea');
+        setSourceReferences(editingItem.SourceReferences || '');
+        setMateriKonten(editingItem.MateriKonten || '');
+        setFile(editingItem.File || '');
+        setCatatan(editingItem.Catatan || '');
+        setChecklistAsset(!!editingItem.ChecklistAsset);
+        setChecklistCaption(!!editingItem.ChecklistCaption);
+        setCommentsList(editingItem.comments || []);
+      } else {
+        setTipeProject('Komersil');
+        setKlien('INOVASI PANGAN LESTARI');
+        setKlienInternal(KATEGORI_INTERNAL_OPTIONS[0]);
+        setKlienInternalLainnya('');
+        const todayIso = getTodayIndoDateString();
+        setTanggalProduksi(todayIso);
+        setJadwalPosting('');
+        setTema('');
+        setIdeKonten('');
+        setDetail('');
+        setJenisKonten('Single Post');
+        setCreator(defaultCreator);
+        setProjectTools('Canva');
+        setStatus('New Idea');
+        setSourceReferences('');
+        setMateriKonten('');
+        setFile('');
+        setCatatan('');
+        setChecklistAsset(false);
+        setChecklistCaption(false);
+        setCommentsList([]);
+      }
+      setActiveModalTab(editingItem && initialTab ? initialTab : 'detail');
+      setIsSubmitting(false);
+      setCommentText('');
+      setMentionQuery(null);
+    }
   }, [editingItem, isOpen, defaultCreator, initialTab]);
 
   useEffect(() => {
@@ -228,13 +249,20 @@ export const ContentModal: React.FC<ContentModalProps> = ({
     e.preventDefault();
     if (isSubmitting) return;
 
+    setFormValidationError(null);
+
     let finalKlien = klien;
     if (tipeProject === 'Internal') {
       finalKlien = klienInternal === 'Lainnya' ? klienInternalLainnya.trim() || 'Internal Lainnya' : klienInternal;
     }
 
     if (!finalKlien) {
-      alert('Nama Klien atau Kategori Internal wajib diisi!');
+      setFormValidationError('Nama Klien atau Kategori Internal wajib diisi!');
+      return;
+    }
+
+    if (!tema.trim() && !ideKonten.trim()) {
+      setFormValidationError('Tema atau Ide Konten wajib diisi!');
       return;
     }
 
@@ -952,6 +980,14 @@ export const ContentModal: React.FC<ContentModalProps> = ({
                   <span className="tabular-nums">({commentsList.length})</span>
                   <span>→</span>
                 </button>
+              </div>
+            )}
+
+            {/* Validation Error Banner */}
+            {formValidationError && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-red-950/80 border border-red-700/80 text-red-200 text-xs font-semibold animate-shake">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                <span>{formValidationError}</span>
               </div>
             )}
 
