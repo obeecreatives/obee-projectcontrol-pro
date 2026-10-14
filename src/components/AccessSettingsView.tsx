@@ -314,7 +314,7 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
       u.role === 'web_developer'
     ).length;
     const admins = directory.filter((u) => u.role === 'admin').length;
-    const creators = directory.filter((u) => u.role === 'staff_creator' || u.role === 'vendor_lapangan').length;
+    const creators = directory.filter((u) => u.role === 'staff_creator').length;
     return { total, fullAccess, admins, creators };
   }, [directory]);
 
@@ -1233,7 +1233,6 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
                           <option value="web_developer">Web Developer</option>
                           <option value="staff_creator">Staff / Creator / Freelancer</option>
                           <option value="site_engineer">Site Engineer</option>
-                          <option value="vendor_lapangan">Vendor Lapangan</option>
                           <option value="client">Client Portal</option>
                         </select>
                       </td>
@@ -1382,7 +1381,6 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
                       'web_developer',
                       'admin',
                       'staff_creator',
-                      'vendor_lapangan',
                       'client',
                     ] as UserRole[]
                   ).map((roleKey) => {
@@ -1637,7 +1635,6 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
                                 <option value="project_manager">Project Manager (Full Akses)</option>
                                 <option value="web_developer">Web Developer (Full Akses)</option>
                                 <option value="site_engineer">Site Engineer</option>
-                                <option value="vendor_lapangan">Vendor Lapangan</option>
                                 <option value="client">Client Portal (Read Only)</option>
                               </select>
                             </div>
@@ -2498,7 +2495,6 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
                   <option value="project_manager">Project Manager / Site Engineer (Full Access Kanban & Fee)</option>
                   <option value="web_developer">Web Developer (Full Access Sistem & Pengaturan)</option>
                   <option value="site_engineer">Site Engineer</option>
-                  <option value="vendor_lapangan">Vendor Lapangan</option>
                   <option value="client">Client Portal / Brand Owner (Read-Only)</option>
                 </select>
               </div>

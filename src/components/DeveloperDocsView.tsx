@@ -145,7 +145,7 @@ Menangani siklus produksi konten, kalender editorial, presensi tim geolokasi, pa
 
 ## 5. Matriks Peran & Hak Akses (RBAC)
 - Project Manager, Admin, Web Developer: Akses penuh semua modul, approval final, dan edit fee.
-- Staff Creator, Site Engineer, Vendor: Dibatasi pada alur New Idea -> Request Approval, fee disembunyikan.
+- Staff Creator, Site Engineer: Alur New Idea -> Request Approval, akses hapus card aktif, alur fleksibel via RBAC.
 - Client: Hanya baca dan berikan feedback approval.
 
 ## 6. SOP Penggunaan Harian

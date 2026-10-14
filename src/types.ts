@@ -15,7 +15,6 @@ export type UserRole =
   | 'admin'
   | 'staff_creator'
   | 'site_engineer'
-  | 'vendor_lapangan'
   | 'client';
 
 export type StatusType =
@@ -238,7 +237,6 @@ export const DEFAULT_ROLE_MENU_PERMISSIONS: RoleMenuPermissions = {
     'developer_docs',
   ],
   staff_creator: ['board', 'calendar', 'dashboard', 'activity'],
-  vendor_lapangan: ['board', 'calendar', 'activity'],
   client: ['board', 'calendar'],
 };
 
@@ -284,13 +282,6 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissionsMap = {
     canChangeStatusToAll: true,
     canApproveToRtP: true,
     canEditRateCard: true,
-    showInternalFee: true,
-    canDelete: true,
-  },
-  vendor_lapangan: {
-    canChangeStatusToAll: false,
-    canApproveToRtP: false,
-    canEditRateCard: false,
     showInternalFee: true,
     canDelete: true,
   },

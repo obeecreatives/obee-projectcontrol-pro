@@ -54,7 +54,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   const isVideo = item.Kategori === 'Video' || item.JenisKonten === 'Reels / TikTok';
 
   const isClient = activeRole === 'client';
-  const isStaff = activeRole === 'staff_creator' || activeRole === 'vendor_lapangan';
+  const isStaff = activeRole === 'staff_creator';
   const isFullOrAdmin =
     roleConfig.canChangeStatusToAll ||
     activeRole === 'admin' ||

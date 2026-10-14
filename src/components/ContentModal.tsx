@@ -99,7 +99,7 @@ export const ContentModal: React.FC<ContentModalProps> = ({
     activeRole === 'project_manager' ||
     activeRole === 'web_developer' ||
     activeRole === 'site_engineer';
-  const isStaff = activeRole === 'staff_creator' || activeRole === 'vendor_lapangan';
+  const isStaff = activeRole === 'staff_creator';
 
   const [activeModalTab, setActiveModalTab] = useState<'detail' | 'comments'>('detail');
   const [tipeProject, setTipeProject] = useState<TipeProjectType>('Komersil');

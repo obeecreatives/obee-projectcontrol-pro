@@ -232,6 +232,18 @@ class AuthService {
               updated = true;
             }
           }
+          // Normalize any legacy vendor_lapangan role to staff_creator
+          if ((found.role as string) === 'vendor_lapangan') {
+            found.role = 'staff_creator';
+            updated = true;
+          }
+        }
+      });
+      // Also check any user in list
+      list.forEach((u) => {
+        if ((u.role as string) === 'vendor_lapangan') {
+          u.role = 'staff_creator';
+          updated = true;
         }
       });
       if (updated) {

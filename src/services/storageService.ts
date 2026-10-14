@@ -223,7 +223,7 @@ class StorageService {
         };
       }
 
-      if (role === 'staff_creator' || role === 'vendor_lapangan') {
+      if (role === 'staff_creator') {
         // Staff CANNOT move into Approved / RtP under any circumstance
         if (newStatus === 'Approved / RtP') {
           return {

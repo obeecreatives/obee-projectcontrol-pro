@@ -60,7 +60,7 @@ export const StaffDatabaseView: React.FC<StaffDatabaseViewProps> = ({
     email: '',
     divisi: 'Desain Grafis',
     jabatan: 'Desainer Grafis',
-    role: 'vendor_lapangan',
+    role: 'staff_creator',
     phone: '',
     statusKerja: 'Aktif',
     baseRate: 30000,
@@ -134,7 +134,7 @@ export const StaffDatabaseView: React.FC<StaffDatabaseViewProps> = ({
         email: formData.email.trim().toLowerCase(),
         divisi: formData.divisi || 'Desain Grafis',
         jabatan: formData.jabatan || 'Desainer Grafis',
-        role: (formData.role as UserRole) || 'vendor_lapangan',
+        role: (formData.role as UserRole) || 'staff_creator',
         phone: formData.phone || '',
         statusKerja: (formData.statusKerja as any) || 'Aktif',
         baseRate: Number(formData.baseRate || 30000),
@@ -171,7 +171,7 @@ export const StaffDatabaseView: React.FC<StaffDatabaseViewProps> = ({
       email: '',
       divisi: 'Desain Grafis',
       jabatan: 'Desainer Grafis',
-      role: 'vendor_lapangan',
+      role: 'staff_creator',
       phone: '',
       statusKerja: 'Aktif',
       baseRate: 30000,
@@ -511,7 +511,7 @@ export const StaffDatabaseView: React.FC<StaffDatabaseViewProps> = ({
                     </tr>
                   ) : (
                     filteredStaff.map((staff) => {
-                      const roleMeta = ROLES[staff.role] || ROLES.vendor_lapangan;
+                      const roleMeta = ROLES[staff.role] || ROLES.staff_creator;
                       return (
                         <tr key={staff.email} className={`${isDarkMode ? 'hover:bg-slate-900/50' : 'hover:bg-slate-50'} transition-colors`}>
                           <td className="py-3.5 px-4">
