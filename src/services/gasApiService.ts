@@ -288,6 +288,7 @@ function handleUpdateStatus_(sheet, body) {
 
 function handleUpsertCard_(sheet, card) {
   if (!card || !card.ID) return createJsonResponse_({ success: false, error: 'Invalid card' });
+  ensureHeaders_(sheet);
   var rowIdx = findRowById_(sheet, String(card.ID).trim());
   var headerMap = getHeaderMap_(sheet);
   var lastCol = sheet.getLastColumn();
@@ -369,8 +370,20 @@ function getHeaderMap_(sheet) {
 }
 
 function ensureHeaders_(sheet) {
-  if (sheet.getLastRow() === 0) {
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  if (lastRow === 0 || lastCol === 0) {
     sheet.appendRow(COLUMN_HEADERS);
+    return;
+  }
+  var currentHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
+  for (var i = 0; i < COLUMN_HEADERS.length; i++) {
+    var expected = COLUMN_HEADERS[i];
+    if (currentHeaders.indexOf(expected) === -1) {
+      lastCol++;
+      sheet.getRange(1, lastCol).setValue(expected);
+      currentHeaders.push(expected);
+    }
   }
 }
 

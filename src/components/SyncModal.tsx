@@ -522,8 +522,15 @@ export const SyncModal: React.FC<SyncModalProps> = ({
                 }`}
               >
                 {copiedKanbanScript ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedKanbanScript ? 'Skrip 2-Arah Tersalin!' : 'Salin Skrip GAS 2-Arah v3.0'}</span>
+                <span>{copiedKanbanScript ? 'Skrip GAS v3.2 Tersalin!' : 'Salin Skrip GAS 2-Arah v3.2 (Support Foto)'}</span>
               </button>
+            </div>
+
+            <div className="p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-800/40 text-[11px] text-emerald-300 flex items-start gap-2">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+              <span>
+                <strong>Proteksi Anti-Hapus Aktif:</strong> Cover visual kartu sekarang dikunci di local storage aman, sehingga tidak akan hilang walau sinkronisasi otomatis berjalan. Klik <strong>Push Seluruh Kartu</strong> untuk menyimpan link cover ke spreadsheet.
+              </span>
             </div>
 
             {/* Kanban Status Feedback */}

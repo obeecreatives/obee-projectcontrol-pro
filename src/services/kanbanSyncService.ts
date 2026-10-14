@@ -501,6 +501,8 @@ export class KanbanSyncService {
         const rawApprove = r.TanggalApprove || r.tanggal_approve || '';
         const cleanApprove = normalizeDateToYMD(rawApprove);
 
+        const remoteFoto = r.FotoUrl || r.foto_url || r.Foto || r.Image || '';
+
         const mappedCard: ContentItem = {
           ID: id,
           Klien: r.Klien || r.klien || 'Klien Baru',
@@ -519,7 +521,7 @@ export class KanbanSyncService {
           Status: (r.Status || r.status || 'New Idea') as StatusType,
           JadwalPosting: cleanJadwal,
           File: r.File || '',
-          FotoUrl: r.FotoUrl || r.foto_url || r.Foto || r.Image || '',
+          FotoUrl: remoteFoto,
           Catatan: r.Catatan || '',
           FeeAmount: Number(r.FeeAmount) || 0,
           CreatedAt: r.CreatedAt || new Date().toISOString(),
@@ -536,9 +538,25 @@ export class KanbanSyncService {
           if (existing.comments && existing.comments.length > 0) {
             mappedCard.comments = existing.comments;
           }
-          mergedMap.set(id, { ...existing, ...mappedCard });
+
+          // Smart Anti-Wipe Protection:
+          // Never allow an empty remote spreadsheet field to erase an existing local card cover!
+          const cachedPhoto = storageService.getCardPhoto(id);
+          const finalFoto = remoteFoto || existing.FotoUrl || cachedPhoto || '';
+          mappedCard.FotoUrl = finalFoto;
+          if (finalFoto) {
+            storageService.setCardPhoto(id, finalFoto);
+          }
+
+          mergedMap.set(id, { ...existing, ...mappedCard, FotoUrl: finalFoto });
           updated++;
         } else {
+          const cachedPhoto = storageService.getCardPhoto(id);
+          const finalFoto = remoteFoto || cachedPhoto || '';
+          mappedCard.FotoUrl = finalFoto;
+          if (finalFoto) {
+            storageService.setCardPhoto(id, finalFoto);
+          }
           mergedMap.set(id, mappedCard);
           added++;
         }
@@ -789,6 +807,7 @@ function handleUpsertCard_(sheet, card) {
     return createJsonResponse_({ success: false, error: 'Card or Card ID is missing' });
   }
   
+  ensureHeaders_(sheet);
   var rowIdx = findRowById_(sheet, String(card.ID).trim());
   var headerMap = getHeaderMap_(sheet);
   var lastCol = sheet.getLastColumn();
@@ -893,8 +912,20 @@ function getHeaderMap_(sheet) {
 }
 
 function ensureHeaders_(sheet) {
-  if (sheet.getLastRow() === 0) {
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  if (lastRow === 0 || lastCol === 0) {
     sheet.appendRow(COLUMN_HEADERS);
+    return;
+  }
+  var currentHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
+  for (var i = 0; i < COLUMN_HEADERS.length; i++) {
+    var expected = COLUMN_HEADERS[i];
+    if (currentHeaders.indexOf(expected) === -1) {
+      lastCol++;
+      sheet.getRange(1, lastCol).setValue(expected);
+      currentHeaders.push(expected);
+    }
   }
 }
 

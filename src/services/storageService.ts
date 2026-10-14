@@ -19,6 +19,7 @@ const KEY_CRM_CLIENTS = 'obee_pcs_crm_clients_v1';
 const KEY_KPI_TARGETS = 'obee_pcs_kpi_targets_v1';
 const KEY_MENU_PERMISSIONS = 'obee_pcs_menu_permissions_v1';
 const KEY_ROLE_PERMISSIONS = 'obee_pcs_role_permissions_v1';
+const KEY_CARD_PHOTOS = 'obee_pcs_card_photos_v1';
 
 export const DEFAULT_KPI_TARGETS: KpiTargets = {
   monthlyContentTarget: 30,
@@ -30,6 +31,50 @@ export const DEFAULT_KPI_TARGETS: KpiTargets = {
 export const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzLzc0-TiWtK2KCB3hBGP6nbUbdMTGYNpQg_s8eHfwPTxIUjV7t6XVaw0yR1mf7jATP/exec';
 
 class StorageService {
+  // Persistent Card Photos Cache (Shield against spreadsheet overrides)
+  getAllCardPhotos(): Record<string, string> {
+    try {
+      const raw = localStorage.getItem(KEY_CARD_PHOTOS);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  getCardPhoto(id: string): string | null {
+    if (!id) return null;
+    try {
+      const photos = this.getAllCardPhotos();
+      return photos[id] || null;
+    } catch {
+      return null;
+    }
+  }
+
+  setCardPhoto(id: string, url: string) {
+    if (!id) return;
+    try {
+      const photos = this.getAllCardPhotos();
+      if (url && url.trim()) {
+        photos[id] = url.trim();
+      } else {
+        delete photos[id];
+      }
+      localStorage.setItem(KEY_CARD_PHOTOS, JSON.stringify(photos));
+    } catch (e) {
+      console.warn('StorageService: failed to write card photo to cache', e);
+    }
+  }
+
+  removeCardPhoto(id: string) {
+    if (!id) return;
+    try {
+      const photos = this.getAllCardPhotos();
+      delete photos[id];
+      localStorage.setItem(KEY_CARD_PHOTOS, JSON.stringify(photos));
+    } catch {}
+  }
+
   getContent(): ContentItem[] {
     try {
       const raw = localStorage.getItem(KEY_CONTENT);
@@ -42,6 +87,9 @@ class StorageService {
         this.saveContent(INITIAL_CONTENT_ITEMS);
         return INITIAL_CONTENT_ITEMS;
       }
+
+      const cardPhotos = this.getAllCardPhotos();
+      let photosUpdated = false;
 
       // Check if comments exist; if all cards have 0 comments, migrate sample comments
       let hasMigrated = false;
@@ -66,7 +114,21 @@ class StorageService {
           it.comments = [];
           hasMigrated = true;
         }
+        // Protect & restore FotoUrl from card photos persistent cache
+        if (!it.FotoUrl && cardPhotos[it.ID]) {
+          it.FotoUrl = cardPhotos[it.ID];
+          hasMigrated = true;
+        } else if (it.FotoUrl && !cardPhotos[it.ID]) {
+          cardPhotos[it.ID] = it.FotoUrl;
+          photosUpdated = true;
+        }
       });
+
+      if (photosUpdated) {
+        try {
+          localStorage.setItem(KEY_CARD_PHOTOS, JSON.stringify(cardPhotos));
+        } catch {}
+      }
 
       if (hasMigrated) {
         this.saveContent(parsed);
@@ -117,6 +179,8 @@ class StorageService {
       const existingItem = list[existingIndex];
       const finalProdDate = itemData.TanggalProduksi ? normalizeDateToYMD(itemData.TanggalProduksi) : existingItem.TanggalProduksi;
 
+      const finalFoto = itemData.FotoUrl !== undefined ? itemData.FotoUrl.trim() : existingItem.FotoUrl || '';
+
       const updatedItem: ContentItem = {
         ...existingItem,
         ...itemData,
@@ -125,6 +189,7 @@ class StorageService {
         Bulan: itemData.Bulan || existingItem.Bulan || (finalProdDate ? getBulanIndoFromDate(finalProdDate) : calcBulan),
         Tahun: itemData.Tahun || existingItem.Tahun || (finalProdDate ? getTahunFromDate(finalProdDate) : calcTahun),
         JadwalPosting: itemData.JadwalPosting !== undefined ? normalizeDateToYMD(itemData.JadwalPosting) : existingItem.JadwalPosting,
+        FotoUrl: finalFoto,
         UpdatedAt: nowIso,
         FeeAmount:
           itemData.TipeProject === 'Internal'
@@ -137,7 +202,14 @@ class StorageService {
           (itemData.Status === 'Approved / RtP' ? todayIndo : undefined),
       } as ContentItem;
       list[existingIndex] = updatedItem;
+
+      if (finalFoto) {
+        this.setCardPhoto(targetId, finalFoto);
+      } else if (itemData.FotoUrl !== undefined && !itemData.FotoUrl) {
+        this.removeCardPhoto(targetId);
+      }
     } else {
+      const finalFoto = itemData.FotoUrl ? itemData.FotoUrl.trim() : '';
       const newItem: ContentItem = {
         ID: targetId,
         Klien: itemData.Klien || 'INOVASI PANGAN LESTARI',
@@ -156,7 +228,7 @@ class StorageService {
         Status: itemData.Status || 'New Idea',
         JadwalPosting: itemData.JadwalPosting ? normalizeDateToYMD(itemData.JadwalPosting) : '',
         File: itemData.File || '',
-        FotoUrl: itemData.FotoUrl || '',
+        FotoUrl: finalFoto,
         Catatan: itemData.Catatan || '',
         FeeAmount: calculatedFee,
         CreatedAt: nowIso,
@@ -168,6 +240,10 @@ class StorageService {
         comments: itemData.comments || [],
       };
       list.unshift(newItem);
+
+      if (finalFoto) {
+        this.setCardPhoto(targetId, finalFoto);
+      }
     }
 
     this.saveContent(list);
@@ -302,6 +378,7 @@ class StorageService {
     if (!item) return { success: false, error: 'Konten tidak ditemukan' };
 
     const filtered = list.filter((it) => it.ID !== id);
+    this.removeCardPhoto(id);
     this.saveContent(filtered);
 
     this.addActivityLog({

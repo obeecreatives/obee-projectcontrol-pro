@@ -1150,8 +1150,13 @@ export const ContentModal: React.FC<ContentModalProps> = ({
                         alt="Pratinjau Sampul"
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          (e.target as HTMLElement).style.display = 'none';
-                          const fallback = (e.target as HTMLElement).nextElementSibling as HTMLElement;
+                          const img = e.currentTarget;
+                          if (fotoUrlAnalysis.fileId && img.src.includes('googleusercontent.com')) {
+                            img.src = `https://drive.google.com/thumbnail?id=${fotoUrlAnalysis.fileId}&sz=w800`;
+                            return;
+                          }
+                          img.style.display = 'none';
+                          const fallback = img.nextElementSibling as HTMLElement;
                           if (fallback) fallback.style.display = 'flex';
                         }}
                       />

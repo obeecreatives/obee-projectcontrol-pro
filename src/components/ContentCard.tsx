@@ -171,8 +171,13 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 loading="lazy"
                 className="w-full h-full object-cover transition-transform duration-300 group-hover/cover:scale-105"
                 onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                  const fallback = (e.target as HTMLElement).nextElementSibling as HTMLElement;
+                  const img = e.currentTarget;
+                  if (imageAnalysis.fileId && img.src.includes('googleusercontent.com')) {
+                    img.src = `https://drive.google.com/thumbnail?id=${imageAnalysis.fileId}&sz=w800`;
+                    return;
+                  }
+                  img.style.display = 'none';
+                  const fallback = img.nextElementSibling as HTMLElement;
                   if (fallback) fallback.style.display = 'flex';
                 }}
               />
