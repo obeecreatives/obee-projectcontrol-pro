@@ -1,5 +1,5 @@
 import React from 'react';
-import { ViewTab, UserRole } from '../types';
+import { ViewTab, UserRole, StaffUser } from '../types';
 import { ROLES } from '../data/seedData';
 import { storageService } from '../services/storageService';
 import { PWAInstallButton } from './PWAInstallButton';
@@ -35,6 +35,7 @@ interface SidebarProps {
   onSyncAll?: () => void;
   isSyncing?: boolean;
   onOpenSyncModal?: () => void;
+  currentUser?: StaffUser | null;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -48,9 +49,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSyncAll,
   isSyncing = false,
   onOpenSyncModal,
+  currentUser,
 }) => {
   const roleConfig = ROLES[activeRole] || ROLES.project_manager;
-  const canManageSyncSettings = activeRole === 'admin' || activeRole === 'project_manager' || activeRole === 'site_engineer' || activeRole === 'web_developer';
+  const isStaffRole = activeRole === 'staff_creator' || activeRole === 'client';
+  const canManageSyncSettings = !isStaffRole && (
+    Boolean(currentUser?.isAdmin) ||
+    activeRole === 'admin' ||
+    activeRole === 'project_manager' ||
+    activeRole === 'site_engineer' ||
+    activeRole === 'web_developer'
+  );
 
   const allNavItems = [
     {
@@ -298,7 +307,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       ? 'bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-700/80 hover:border-slate-600'
                       : 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border-slate-300 shadow-xs'
                   }`}
-                  title="Buka Pengaturan Link Spreadsheet CRM & Staff / Upload CSV"
+                  title="Pengaturan Sync Spreadsheet & Skrip GAS / Upload CSV"
                 >
                   <FileSpreadsheet className="w-4 h-4 text-red-500" />
                 </button>
@@ -334,12 +343,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       ? 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700'
                       : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300 shadow-xs'
                   }`}
-                  title="Buka Pengaturan Link Spreadsheet CRM & Staff / Upload CSV"
+                  title="Pengaturan Sync Spreadsheet & Skrip GAS / Upload CSV"
                 >
                   <FileSpreadsheet className="w-4 h-4 text-red-500" />
                   <div className={`fixed left-[84px] ${isDarkMode ? 'bg-slate-900 border-slate-700 text-slate-200' : 'bg-white border-slate-200 text-slate-800 shadow-lg'} border text-xs px-3 py-2 rounded-xl shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap`}>
-                    <div className="font-bold text-sm text-red-400">Pengaturan Spreadsheet</div>
-                    <div className="text-xs text-slate-400 mt-0.5">Edit Link Spreadsheet CRM & Staff</div>
+                    <div className="font-bold text-sm text-red-400">Pengaturan Spreadsheet & GAS</div>
+                    <div className="text-xs text-slate-400 mt-0.5">Edit Link Spreadsheet CRM & Staff, Skrip GAS</div>
                   </div>
                 </button>
               )}

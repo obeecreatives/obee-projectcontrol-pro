@@ -528,9 +528,6 @@ export default function App() {
         onToggleSidebar={handleToggleSidebar}
         isDarkMode={isDarkMode}
         onToggleTheme={handleToggleTheme}
-        onSyncAll={handleSyncAllData}
-        isSyncing={isGlobalSyncing}
-        onOpenSyncModal={() => setIsSyncModalOpen(true)}
         selectedMonth={selectedMonth}
         onSelectMonth={setSelectedMonth}
         availableMonths={availableMonths}
@@ -555,6 +552,7 @@ export default function App() {
           onSyncAll={handleSyncAllData}
           isSyncing={isGlobalSyncing}
           onOpenSyncModal={() => setIsSyncModalOpen(true)}
+          currentUser={currentUser}
         />
 
         {/* Main Viewport Container */}
@@ -573,7 +571,6 @@ export default function App() {
               currentUser={currentUser}
               kanbanSyncState={kanbanSyncState}
               onTriggerSync={handleTriggerTwoWaySync}
-              onOpenSyncModal={() => setIsSyncModalOpen(true)}
               highlightedCardId={highlightedCardId}
               selectedMonth={selectedMonth}
               onSelectMonth={setSelectedMonth}

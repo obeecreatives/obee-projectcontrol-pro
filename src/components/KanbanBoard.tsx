@@ -17,7 +17,6 @@ import {
   RefreshCw,
   CheckCircle2,
   Cloud,
-  FileSpreadsheet,
 } from 'lucide-react';
 import { isCardInPeriod, getCurrentMonthInfo } from '../utils/dateFormatter';
 
@@ -34,7 +33,6 @@ interface KanbanBoardProps {
   currentUser?: StaffUser | null;
   kanbanSyncState?: KanbanSyncState;
   onTriggerSync?: () => void;
-  onOpenSyncModal?: () => void;
   highlightedCardId?: string | null;
   selectedMonth?: string;
   onSelectMonth?: (month: string) => void;
@@ -64,7 +62,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   currentUser,
   kanbanSyncState,
   onTriggerSync,
-  onOpenSyncModal,
   highlightedCardId,
   selectedMonth = 'CURRENT',
   onSelectMonth,
@@ -260,19 +257,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   </span>
                   <span className="md:hidden text-[11px]">2-Way Sync</span>
                 </button>
-                {onOpenSyncModal && (
-                  <button
-                    onClick={onOpenSyncModal}
-                    className={`p-1.5 rounded-xl border text-xs transition-colors cursor-pointer ${
-                      isDarkMode
-                        ? 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
-                        : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
-                    }`}
-                    title="Pengaturan Sync Spreadsheet & Skrip GAS"
-                  >
-                    <FileSpreadsheet className="w-3.5 h-3.5 text-red-400" />
-                  </button>
-                )}
               </div>
             )}
 

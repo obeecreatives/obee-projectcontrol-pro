@@ -50,9 +50,6 @@ interface NavbarProps {
   onToggleSidebar?: () => void;
   isDarkMode: boolean;
   onToggleTheme: () => void;
-  onSyncAll?: () => void;
-  isSyncing?: boolean;
-  onOpenSyncModal?: () => void;
   selectedMonth?: string;
   onSelectMonth?: (month: string) => void;
   availableMonths?: { value: string; label: string; count: number; isCurrent?: boolean }[];
@@ -77,9 +74,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleSidebar,
   isDarkMode,
   onToggleTheme,
-  onSyncAll,
-  isSyncing = false,
-  onOpenSyncModal,
   selectedMonth,
   onSelectMonth,
   availableMonths = [],
