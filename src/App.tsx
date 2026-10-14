@@ -148,9 +148,15 @@ export default function App() {
       addToast('Data kartu Kanban terupdate otomatis dari Spreadsheet', 'info');
     });
 
+    const handlePermissionsUpdated = () => {
+      setMenuPermissionsVersion((v) => v + 1);
+    };
+    window.addEventListener('roles-permissions-updated', handlePermissionsUpdated);
+
     return () => {
       unsubscribe();
       kanbanSyncService.stopAutoSyncPolling();
+      window.removeEventListener('roles-permissions-updated', handlePermissionsUpdated);
     };
   }, []);
 

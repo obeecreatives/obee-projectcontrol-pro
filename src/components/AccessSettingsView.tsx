@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { StaffUser, UserRole, SecurityLogItem, DefaultPasswordConfig, ViewTab, RoleMenuPermissions, DEFAULT_ROLE_MENU_PERMISSIONS } from '../types';
+import { StaffUser, UserRole, SecurityLogItem, DefaultPasswordConfig, ViewTab, RoleMenuPermissions, DEFAULT_ROLE_MENU_PERMISSIONS, RolePermissionKey, RolePermissionsMap, DEFAULT_ROLE_PERMISSIONS } from '../types';
 import { authService, DEVELOPER_STANDARD_DEFAULT_PASSWORDS } from '../services/authService';
 import { storageService } from '../services/storageService';
 import { ROLES, FULL_ACCESS_EMAILS } from '../data/seedData';
@@ -29,6 +29,7 @@ import {
   Send,
   Sliders,
   CheckSquare,
+  Square,
   Save,
   CreditCard,
   Kanban,
@@ -38,6 +39,9 @@ import {
   Cpu,
   BookOpen,
   UserCog,
+  Table,
+  LayoutGrid,
+  X,
 } from 'lucide-react';
 
 interface AccessSettingsViewProps {
@@ -66,6 +70,61 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
     storageService.getMenuPermissions()
   );
   const [menuMatrixFeedback, setMenuMatrixFeedback] = useState<string | null>(null);
+
+  // Dynamic RBAC Role Capabilities State (Option 2)
+  const [rolePermissions, setRolePermissions] = useState<RolePermissionsMap>(() =>
+    storageService.getRolePermissions()
+  );
+  const [rbacViewMode, setRbacViewMode] = useState<'table' | 'cards'>('table');
+  const [rbacFeedback, setRbacFeedback] = useState<string | null>(null);
+
+  const handleToggleRbacPermission = (role: UserRole, permKey: RolePermissionKey) => {
+    setRolePermissions((prev) => {
+      const currentVal = prev[role]?.[permKey] ?? false;
+      const updated = {
+        ...prev,
+        [role]: {
+          ...prev[role],
+          [permKey]: !currentVal,
+        },
+      };
+      storageService.saveRolePermissions(updated);
+      if (onRefreshDirectory) onRefreshDirectory();
+
+      const roleTitle = ROLES[role]?.label || role;
+      const permLabel =
+        permKey === 'canDelete'
+          ? 'Hapus Card'
+          : permKey === 'canChangeStatusToAll'
+          ? 'Alur Geser Bebas'
+          : permKey === 'canApproveToRtP'
+          ? 'Approval ke RtP'
+          : permKey === 'canEditRateCard'
+          ? 'Edit Rate Card & Staf'
+          : 'Lihat Fee & Omzet';
+
+      setRbacFeedback(`Izin "${permLabel}" untuk peran "${roleTitle}" berhasil diubah: ${!currentVal ? '✅ DIIZINKAN' : '❌ DILARANG'}.`);
+      setTimeout(() => setRbacFeedback(null), 3500);
+      return updated;
+    });
+  };
+
+  const handleResetRbacPermissions = () => {
+    if (window.confirm('Kembalikan seluruh konfigurasi Matriks Hak Akses (RBAC) ke standar bawaan sistem? (Peran Staff/Freelancer akan tetap memiliki izin hapus card)')) {
+      const reset = storageService.resetRolePermissions();
+      setRolePermissions(reset);
+      if (onRefreshDirectory) onRefreshDirectory();
+      setRbacFeedback('Matriks Hak Akses (RBAC) berhasil dikembalikan ke standar bawaan sistem.');
+      setTimeout(() => setRbacFeedback(null), 3500);
+    }
+  };
+
+  const handleSaveRbacPermissions = () => {
+    storageService.saveRolePermissions(rolePermissions);
+    if (onRefreshDirectory) onRefreshDirectory();
+    setRbacFeedback('Seluruh konfigurasi Matriks Hak Akses (RBAC) berhasil disimpan!');
+    setTimeout(() => setRbacFeedback(null), 3500);
+  };
 
   // Filter & Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -196,6 +255,7 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
     setDefaultPasswords(authService.getDefaultPasswordConfig());
     setSecurityLogs(authService.getSecurityLogs());
     setMenuPermissions(storageService.getMenuPermissions());
+    setRolePermissions(storageService.getRolePermissions());
     if (onRefreshDirectory) onRefreshDirectory();
   };
 
@@ -706,94 +766,398 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
       {/* Subtab 0: Role Settings & Permission Matrix */}
       {subTab === 'roles' && (
         <div className="space-y-6">
-          {/* Section 1: Role Overview Cards */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
+          {/* Section 1: Interactive Role Permission Matrix (RBAC) */}
+          <div className={`p-5 rounded-2xl border ${
+            isDarkMode ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'
+          } shadow-lg space-y-4`}>
+            {/* Header with Title, Mode Switcher, and Actions */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div>
-                <h3 className={`font-bold text-sm sm:text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  1. Matriks Hak Akses & Izin Peran Sistem (RBAC)
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Ringkasan kapabilitas hak alur kerja Kanban, kunci tarif, dan kewenangan setiap peran.
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className={`font-bold text-sm sm:text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    1. Matriks Hak Akses & Izin Peran Sistem (RBAC)
+                  </h3>
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold">
+                    Checklist Interaktif / Dinamis
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-1 max-w-3xl leading-relaxed">
+                  Centang (checklist) hak akses peran di bawah ini untuk mengaktifkan atau menonaktifkan izin alur kerja, persetujuan tarif, atau hapus kartu. Perubahan langsung tersimpan otomatis dan berlaku ke seluruh sistem tanpa mengubah kode.
                 </p>
               </div>
-              <span className={`text-xs px-2.5 py-1 rounded-lg border font-mono font-bold ${
-                isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-300 text-slate-700'
-              }`}>
-                {Object.keys(ROLES).length} Peran Terkonfigurasi
-              </span>
+
+              <div className="flex items-center gap-2 flex-wrap shrink-0">
+                {/* View Mode Switcher: Table vs Cards */}
+                <div className={`p-1 rounded-xl border flex items-center gap-1 ${
+                  isDarkMode ? 'bg-slate-900/80 border-slate-700' : 'bg-slate-100 border-slate-300'
+                }`}>
+                  <button
+                    type="button"
+                    onClick={() => setRbacViewMode('table')}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                      rbacViewMode === 'table'
+                        ? 'bg-red-600 text-white shadow-xs'
+                        : isDarkMode
+                        ? 'text-slate-400 hover:text-white'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                    title="Tampilan Tabel Matriks Kompak"
+                  >
+                    <Table className="w-3.5 h-3.5" />
+                    <span>Tabel Matriks</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRbacViewMode('cards')}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                      rbacViewMode === 'cards'
+                        ? 'bg-red-600 text-white shadow-xs'
+                        : isDarkMode
+                        ? 'text-slate-400 hover:text-white'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                    title="Tampilan Kartu Penjelasan Detail"
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                    <span>Kartu Detail</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleResetRbacPermissions}
+                  className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border transition-colors cursor-pointer ${
+                    isDarkMode
+                      ? 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border-slate-700'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                  }`}
+                  title="Kembalikan konfigurasi matriks ke default sistem"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reset Default</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSaveRbacPermissions}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-[#E30000] hover:bg-[#c00000] text-white font-bold text-xs rounded-xl shadow-md shadow-red-950/40 cursor-pointer transition-colors"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Simpan Perubahan</span>
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Object.entries(ROLES).map(([roleKey, role]) => {
-                const countMembers = directory.filter((u) => u.role === roleKey).length;
+            {/* RBAC Feedback Banner */}
+            {rbacFeedback && (
+              <div className="p-3.5 rounded-xl bg-emerald-950/90 border border-emerald-800 text-emerald-200 text-xs font-semibold flex items-center justify-between shadow-lg animate-in fade-in">
+                <div className="flex items-center gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>{rbacFeedback}</span>
+                </div>
+                <button
+                  onClick={() => setRbacFeedback(null)}
+                  className="text-emerald-400 hover:text-white p-1 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
 
-                return (
-                  <div
-                    key={roleKey}
-                    className={`p-4 rounded-2xl border flex flex-col justify-between transition-all ${
-                      isDarkMode
-                        ? 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
-                        : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${role.badgeColor}`}>
-                          {role.label}
-                        </span>
-                        <span className={`text-[11px] font-mono px-2 py-0.5 rounded ${
-                          isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-700'
-                        }`}>
-                          {countMembers} Staf
-                        </span>
-                      </div>
+            {/* Explanatory Callout Banner */}
+            <div className={`p-3.5 rounded-xl border text-xs flex items-start gap-3 ${
+              isDarkMode ? 'bg-emerald-950/30 border-emerald-800/50 text-emerald-200' : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+            }`}>
+              <ShieldCheck className="w-5 h-5 shrink-0 mt-0.5 text-emerald-400" />
+              <div className="space-y-1">
+                <div className="font-bold flex items-center gap-2">
+                  <span>Izin Hapus Card Aktif untuk Staff / Creator / Freelancer (OPSI 2 Diaktifkan)</span>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-mono">
+                    Staff Delete: ON
+                  </span>
+                </div>
+                <p className="text-[11px] leading-relaxed opacity-90">
+                  Kini tombol <b>Hapus Konten (Trash)</b> pada kartu Kanban dapat diakses oleh staf biasa / freelancer. Anda dapat mengubah checklist di bawah kapan saja untuk mengatur hak akses seluruh peran tanpa perlu melakukan pembaruan kode lagi.
+                </p>
+              </div>
+            </div>
 
-                      <h4 className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'} mb-1`}>
-                        {role.title}
-                      </h4>
+            {/* Mode 1: Interactive Table Grid */}
+            {rbacViewMode === 'table' && (
+              <div className={`rounded-2xl border overflow-hidden shadow-md ${
+                isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className={`border-b text-[11px] font-bold uppercase tracking-wider ${
+                      isDarkMode ? 'bg-slate-900/90 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
+                    }`}>
+                      <tr>
+                        <th className="py-3.5 px-4 min-w-[230px] sticky left-0 z-10 backdrop-blur-md">
+                          Peran Pengguna (Role)
+                        </th>
+                        <th className="py-3.5 px-3 text-center min-w-[130px]">
+                          <div className="flex flex-col items-center gap-1">
+                            <Trash2 className="w-4 h-4 text-rose-500" />
+                            <span>Hapus Card</span>
+                            <span className="text-[9px] font-normal lowercase tracking-normal text-slate-400">Tombol Hapus Konten</span>
+                          </div>
+                        </th>
+                        <th className="py-3.5 px-3 text-center min-w-[130px]">
+                          <div className="flex flex-col items-center gap-1">
+                            <Kanban className="w-4 h-4 text-blue-500" />
+                            <span>Alur Geser Bebas</span>
+                            <span className="text-[9px] font-normal lowercase tracking-normal text-slate-400">Bebas Semua Kolom</span>
+                          </div>
+                        </th>
+                        <th className="py-3.5 px-3 text-center min-w-[130px]">
+                          <div className="flex flex-col items-center gap-1">
+                            <Lock className="w-4 h-4 text-amber-500" />
+                            <span>Approval ke RtP</span>
+                            <span className="text-[9px] font-normal lowercase tracking-normal text-slate-400">Kunci & Setujui Fee</span>
+                          </div>
+                        </th>
+                        <th className="py-3.5 px-3 text-center min-w-[130px]">
+                          <div className="flex flex-col items-center gap-1">
+                            <CreditCard className="w-4 h-4 text-purple-500" />
+                            <span>Edit Rate Card</span>
+                            <span className="text-[9px] font-normal lowercase tracking-normal text-slate-400">Tarif & Database Staf</span>
+                          </div>
+                        </th>
+                        <th className="py-3.5 px-3 text-center min-w-[130px]">
+                          <div className="flex flex-col items-center gap-1">
+                            <Eye className="w-4 h-4 text-emerald-500" />
+                            <span>Lihat Fee & Omzet</span>
+                            <span className="text-[9px] font-normal lowercase tracking-normal text-slate-400">Nominal Internal</span>
+                          </div>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {Object.entries(ROLES).map(([roleKey, role]) => {
+                        const countMembers = directory.filter((u) => u.role === roleKey).length;
+                        const perms = rolePermissions[roleKey as UserRole] || {
+                          canDelete: role.canDelete,
+                          canChangeStatusToAll: role.canChangeStatusToAll,
+                          canApproveToRtP: role.canApproveToRtP,
+                          canEditRateCard: role.canEditRateCard,
+                          showInternalFee: role.showInternalFee,
+                        };
 
-                      <p className="text-xs text-slate-400 leading-relaxed mb-4 min-h-[40px]">
-                        {role.description}
-                      </p>
+                        const renderCellButton = (permKey: RolePermissionKey, label: string) => {
+                          const isAllowed = Boolean(perms[permKey]);
+                          return (
+                            <td className="py-3 px-3 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleRbacPermission(roleKey as UserRole, permKey)}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                                  isAllowed
+                                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/25 shadow-xs'
+                                    : isDarkMode
+                                    ? 'bg-slate-800/40 text-slate-500 border-slate-700/60 hover:bg-slate-800 hover:text-slate-400'
+                                    : 'bg-slate-100 text-slate-400 border-slate-200 hover:bg-slate-200 hover:text-slate-600'
+                                }`}
+                                title={`Klik untuk ${isAllowed ? 'mencabut' : 'mengaktifkan'} izin ${label} pada peran ${role.label}`}
+                              >
+                                {isAllowed ? (
+                                  <>
+                                    <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />
+                                    <span>Diizinkan</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Square className="w-3.5 h-3.5 text-slate-500" />
+                                    <span>Dilarang</span>
+                                  </>
+                                )}
+                              </button>
+                            </td>
+                          );
+                        };
 
-                      <div className="space-y-1.5 pt-3 border-t border-slate-700/50 text-[11px]">
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-400">Alur Geser Bebas:</span>
-                          <span className={role.canChangeStatusToAll ? 'text-emerald-400 font-bold' : 'text-slate-500'}>
-                            {role.canChangeStatusToAll ? '✅ Bebas Semua' : 'Draft -> Req Approval'}
+                        return (
+                          <tr
+                            key={roleKey}
+                            className={`transition-colors ${
+                              isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-100/60'
+                            }`}
+                          >
+                            <td className="py-3 px-4 sticky left-0 z-10 backdrop-blur-md">
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${role.badgeColor}`}>
+                                    {role.label}
+                                  </span>
+                                  <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                                    isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'
+                                  }`}>
+                                    {countMembers} Staf
+                                  </span>
+                                </div>
+                                <span className={`font-bold text-xs ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                  {role.title}
+                                </span>
+                              </div>
+                            </td>
+                            {renderCellButton('canDelete', 'Hapus Konten')}
+                            {renderCellButton('canChangeStatusToAll', 'Alur Geser Bebas')}
+                            {renderCellButton('canApproveToRtP', 'Approval ke RtP')}
+                            {renderCellButton('canEditRateCard', 'Edit Rate Card & Staf')}
+                            {renderCellButton('showInternalFee', 'Lihat Fee & Omzet')}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Mode 2: Interactive Role Cards */}
+            {rbacViewMode === 'cards' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Object.entries(ROLES).map(([roleKey, role]) => {
+                  const countMembers = directory.filter((u) => u.role === roleKey).length;
+                  const perms = rolePermissions[roleKey as UserRole] || {
+                    canDelete: role.canDelete,
+                    canChangeStatusToAll: role.canChangeStatusToAll,
+                    canApproveToRtP: role.canApproveToRtP,
+                    canEditRateCard: role.canEditRateCard,
+                    showInternalFee: role.showInternalFee,
+                  };
+
+                  return (
+                    <div
+                      key={roleKey}
+                      className={`p-4 rounded-2xl border flex flex-col justify-between transition-all ${
+                        isDarkMode
+                          ? 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+                          : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${role.badgeColor}`}>
+                            {role.label}
+                          </span>
+                          <span className={`text-[11px] font-mono px-2 py-0.5 rounded ${
+                            isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-700'
+                          }`}>
+                            {countMembers} Staf
                           </span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-400">Approval ke RtP:</span>
-                          <span className={role.canApproveToRtP ? 'text-emerald-400 font-bold' : 'text-red-400 font-semibold'}>
-                            {role.canApproveToRtP ? '✅ Berhak Kunci Fee' : '❌ Dilarang (Reviewer Only)'}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-400">Edit Rate Card:</span>
-                          <span className={role.canEditRateCard ? 'text-emerald-400 font-bold' : 'text-slate-500'}>
-                            {role.canEditRateCard ? '✅ Ya' : '❌ Tidak'}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-400">Lihat Fee / Omzet:</span>
-                          <span className={role.showInternalFee ? 'text-emerald-400 font-bold' : 'text-slate-500'}>
-                            {role.showInternalFee ? '✅ Ya' : '❌ Disembunyikan'}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-400">Hapus Konten:</span>
-                          <span className={role.canDelete ? 'text-emerald-400 font-bold' : 'text-slate-500'}>
-                            {role.canDelete ? '✅ Ya' : '❌ Tidak'}
-                          </span>
+
+                        <h4 className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'} mb-1`}>
+                          {role.title}
+                        </h4>
+
+                        <p className="text-xs text-slate-400 leading-relaxed mb-4 min-h-[40px]">
+                          {role.description}
+                        </p>
+
+                        <div className="space-y-2 pt-3 border-t border-slate-700/50 text-xs">
+                          {/* Hapus Konten / Card */}
+                          <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-800/20">
+                            <span className="text-slate-300 flex items-center gap-1.5 text-[11px]">
+                              <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                              Hapus Konten (Card):
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleRbacPermission(roleKey as UserRole, 'canDelete')}
+                              className={`px-2 py-1 rounded text-[11px] font-bold border transition-all cursor-pointer ${
+                                perms.canDelete
+                                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30'
+                                  : 'bg-slate-800 text-slate-500 border-slate-700 hover:text-slate-300'
+                              }`}
+                            >
+                              {perms.canDelete ? '✅ Diizinkan' : '❌ Dilarang'}
+                            </button>
+                          </div>
+
+                          {/* Alur Geser Bebas */}
+                          <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-800/20">
+                            <span className="text-slate-300 flex items-center gap-1.5 text-[11px]">
+                              <Kanban className="w-3.5 h-3.5 text-blue-400" />
+                              Alur Geser Bebas:
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleRbacPermission(roleKey as UserRole, 'canChangeStatusToAll')}
+                              className={`px-2 py-1 rounded text-[11px] font-bold border transition-all cursor-pointer ${
+                                perms.canChangeStatusToAll
+                                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30'
+                                  : 'bg-slate-800 text-slate-500 border-slate-700 hover:text-slate-300'
+                              }`}
+                            >
+                              {perms.canChangeStatusToAll ? '✅ Bebas Semua' : 'Draft -> Review'}
+                            </button>
+                          </div>
+
+                          {/* Approval ke RtP */}
+                          <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-800/20">
+                            <span className="text-slate-300 flex items-center gap-1.5 text-[11px]">
+                              <Lock className="w-3.5 h-3.5 text-amber-400" />
+                              Approval ke RtP:
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleRbacPermission(roleKey as UserRole, 'canApproveToRtP')}
+                              className={`px-2 py-1 rounded text-[11px] font-bold border transition-all cursor-pointer ${
+                                perms.canApproveToRtP
+                                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30'
+                                  : 'bg-slate-800 text-slate-500 border-slate-700 hover:text-slate-300'
+                              }`}
+                            >
+                              {perms.canApproveToRtP ? '✅ Kunci Fee' : '❌ Dilarang'}
+                            </button>
+                          </div>
+
+                          {/* Edit Rate Card */}
+                          <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-800/20">
+                            <span className="text-slate-300 flex items-center gap-1.5 text-[11px]">
+                              <CreditCard className="w-3.5 h-3.5 text-purple-400" />
+                              Edit Rate Card:
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleRbacPermission(roleKey as UserRole, 'canEditRateCard')}
+                              className={`px-2 py-1 rounded text-[11px] font-bold border transition-all cursor-pointer ${
+                                perms.canEditRateCard
+                                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30'
+                                  : 'bg-slate-800 text-slate-500 border-slate-700 hover:text-slate-300'
+                              }`}
+                            >
+                              {perms.canEditRateCard ? '✅ Diizinkan' : '❌ Tidak'}
+                            </button>
+                          </div>
+
+                          {/* Lihat Fee & Omzet */}
+                          <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-800/20">
+                            <span className="text-slate-300 flex items-center gap-1.5 text-[11px]">
+                              <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                              Lihat Fee / Omzet:
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleRbacPermission(roleKey as UserRole, 'showInternalFee')}
+                              className={`px-2 py-1 rounded text-[11px] font-bold border transition-all cursor-pointer ${
+                                perms.showInternalFee
+                                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30'
+                                  : 'bg-slate-800 text-slate-500 border-slate-700 hover:text-slate-300'
+                              }`}
+                            >
+                              {perms.showInternalFee ? '✅ Ditampilkan' : '❌ Sembunyi'}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Section 2: Interactive Role Assignment Table */}

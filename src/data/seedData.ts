@@ -1,4 +1,4 @@
-import { ContentItem, RateCardItem, GeneralLink, RoleConfig, UserRole, CrmClientItem } from '../types';
+import { ContentItem, RateCardItem, GeneralLink, RoleConfig, UserRole, CrmClientItem, RolePermissionKey, RolePermissionsMap, DEFAULT_ROLE_PERMISSIONS } from '../types';
 
 export const ROLES: Record<UserRole, RoleConfig> = {
   project_manager: {
@@ -44,13 +44,13 @@ export const ROLES: Record<UserRole, RoleConfig> = {
     id: 'staff_creator',
     title: 'Staff / Creator / Freelancer',
     label: 'Staff Creator',
-    description: 'Berhak memindahkan kartu pada fase draft awal (New Idea - On Progress - Request Approval) dan menggeser kartu yang SUDAH Approved / RtP. HANYA TIDAK BERHAK memindah kartu KE Approved / RtP (fee ditentukan dari Approved).',
+    description: 'Berhak memindahkan kartu pada fase draft awal (New Idea - On Progress - Request Approval) dan menggeser kartu yang SUDAH Approved / RtP. Memiliki akses hapus kartu dan kelola draft.',
     badgeColor: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
     canChangeStatusToAll: false,
     canApproveToRtP: false,
     canEditRateCard: false,
     showInternalFee: true,
-    canDelete: false,
+    canDelete: true,
     isFullAccess: false,
   },
   site_engineer: {
@@ -70,13 +70,13 @@ export const ROLES: Record<UserRole, RoleConfig> = {
     id: 'vendor_lapangan',
     title: 'Staff / Creator / Freelancer',
     label: 'Staff Creator',
-    description: 'Berhak memindahkan kartu pada fase draft awal (New Idea - On Progress - Request Approval) dan menggeser kartu yang SUDAH Approved / RtP. HANYA TIDAK BERHAK memindah kartu KE Approved / RtP.',
+    description: 'Berhak memindahkan kartu pada fase draft awal (New Idea - On Progress - Request Approval) dan menggeser kartu yang SUDAH Approved / RtP. Memiliki akses hapus kartu.',
     badgeColor: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
     canChangeStatusToAll: false,
     canApproveToRtP: false,
     canEditRateCard: false,
     showInternalFee: true,
-    canDelete: false,
+    canDelete: true,
     isFullAccess: false,
   },
   client: {
@@ -93,6 +93,16 @@ export const ROLES: Record<UserRole, RoleConfig> = {
     isFullAccess: false,
   },
 };
+
+export function applyRolePermissions(perms: Partial<RolePermissionsMap>) {
+  if (!perms) return;
+  (Object.keys(perms) as UserRole[]).forEach((roleKey) => {
+    if (ROLES[roleKey] && perms[roleKey]) {
+      Object.assign(ROLES[roleKey], perms[roleKey]);
+    }
+  });
+}
+
 
 export const KATEGORI_INTERNAL_OPTIONS = [
   'FeedKreatif',

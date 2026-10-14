@@ -241,3 +241,65 @@ export const DEFAULT_ROLE_MENU_PERMISSIONS: RoleMenuPermissions = {
   vendor_lapangan: ['board', 'calendar', 'activity'],
   client: ['board', 'calendar'],
 };
+
+export type RolePermissionKey =
+  | 'canDelete'
+  | 'canChangeStatusToAll'
+  | 'canApproveToRtP'
+  | 'canEditRateCard'
+  | 'showInternalFee';
+
+export type RolePermissionsMap = Record<UserRole, Record<RolePermissionKey, boolean>>;
+
+export const DEFAULT_ROLE_PERMISSIONS: RolePermissionsMap = {
+  project_manager: {
+    canChangeStatusToAll: true,
+    canApproveToRtP: true,
+    canEditRateCard: true,
+    showInternalFee: true,
+    canDelete: true,
+  },
+  web_developer: {
+    canChangeStatusToAll: true,
+    canApproveToRtP: true,
+    canEditRateCard: true,
+    showInternalFee: true,
+    canDelete: true,
+  },
+  admin: {
+    canChangeStatusToAll: true,
+    canApproveToRtP: true,
+    canEditRateCard: true,
+    showInternalFee: true,
+    canDelete: true,
+  },
+  staff_creator: {
+    canChangeStatusToAll: false,
+    canApproveToRtP: false,
+    canEditRateCard: false,
+    showInternalFee: true,
+    canDelete: true, // Diaktifkan secara default untuk Staff/Freelancer
+  },
+  site_engineer: {
+    canChangeStatusToAll: true,
+    canApproveToRtP: true,
+    canEditRateCard: true,
+    showInternalFee: true,
+    canDelete: true,
+  },
+  vendor_lapangan: {
+    canChangeStatusToAll: false,
+    canApproveToRtP: false,
+    canEditRateCard: false,
+    showInternalFee: true,
+    canDelete: true,
+  },
+  client: {
+    canChangeStatusToAll: false,
+    canApproveToRtP: false,
+    canEditRateCard: false,
+    showInternalFee: false,
+    canDelete: false,
+  },
+};
+

@@ -1,5 +1,5 @@
-import { ContentItem, RateCardItem, GeneralLink, ActivityLog, StatusType, UserRole, CrmClientItem, CardComment, KpiTargets, RoleMenuPermissions, DEFAULT_ROLE_MENU_PERMISSIONS, ViewTab } from '../types';
-import { INITIAL_CONTENT_ITEMS, INITIAL_RATE_CARDS, INITIAL_LINKS, FULL_ACCESS_EMAILS, INITIAL_CRM_DATA, KATEGORI_INTERNAL_OPTIONS } from '../data/seedData';
+import { ContentItem, RateCardItem, GeneralLink, ActivityLog, StatusType, UserRole, CrmClientItem, CardComment, KpiTargets, RoleMenuPermissions, DEFAULT_ROLE_MENU_PERMISSIONS, ViewTab, RolePermissionKey, RolePermissionsMap, DEFAULT_ROLE_PERMISSIONS } from '../types';
+import { INITIAL_CONTENT_ITEMS, INITIAL_RATE_CARDS, INITIAL_LINKS, FULL_ACCESS_EMAILS, INITIAL_CRM_DATA, KATEGORI_INTERNAL_OPTIONS, applyRolePermissions, ROLES } from '../data/seedData';
 import { geoService } from './geoService';
 import {
   getTodayIndoDateString,
@@ -18,6 +18,7 @@ const KEY_GAS_URL = 'obee_pcs_gas_url_v1';
 const KEY_CRM_CLIENTS = 'obee_pcs_crm_clients_v1';
 const KEY_KPI_TARGETS = 'obee_pcs_kpi_targets_v1';
 const KEY_MENU_PERMISSIONS = 'obee_pcs_menu_permissions_v1';
+const KEY_ROLE_PERMISSIONS = 'obee_pcs_role_permissions_v1';
 
 export const DEFAULT_KPI_TARGETS: KpiTargets = {
   monthlyContentTarget: 30,
@@ -668,6 +669,68 @@ class StorageService {
     const allowed = perms[role] || DEFAULT_ROLE_MENU_PERMISSIONS[role] || ['board'];
     return allowed.includes(tab);
   }
+
+  getRolePermissions(): RolePermissionsMap {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem(KEY_ROLE_PERMISSIONS) : null;
+      if (!raw) {
+        applyRolePermissions(DEFAULT_ROLE_PERMISSIONS);
+        return JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS));
+      }
+      const parsed = JSON.parse(raw);
+      const merged: RolePermissionsMap = JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS));
+      (Object.keys(DEFAULT_ROLE_PERMISSIONS) as UserRole[]).forEach((role) => {
+        if (parsed[role]) {
+          merged[role] = {
+            ...merged[role],
+            ...parsed[role],
+          };
+        }
+      });
+      applyRolePermissions(merged);
+      return merged;
+    } catch {
+      applyRolePermissions(DEFAULT_ROLE_PERMISSIONS);
+      return JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS));
+    }
+  }
+
+  saveRolePermissions(perms: RolePermissionsMap): void {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(KEY_ROLE_PERMISSIONS, JSON.stringify(perms));
+      }
+      applyRolePermissions(perms);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('roles-permissions-updated', { detail: perms }));
+      }
+    } catch (e) {
+      console.error('Failed to save Role Permissions:', e);
+    }
+  }
+
+  resetRolePermissions(): RolePermissionsMap {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(KEY_ROLE_PERMISSIONS);
+      }
+      applyRolePermissions(DEFAULT_ROLE_PERMISSIONS);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('roles-permissions-updated', { detail: DEFAULT_ROLE_PERMISSIONS }));
+      }
+    } catch (e) {
+      console.error('Failed to clear Role Permissions:', e);
+    }
+    return JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS));
+  }
+
+  canRolePerform(role: UserRole, permKey: RolePermissionKey): boolean {
+    const roleConfig = ROLES[role] || ROLES.project_manager;
+    return Boolean(roleConfig[permKey]);
+  }
 }
 
 export const storageService = new StorageService();
+// Initialize dynamic RBAC permissions into live ROLES
+storageService.getRolePermissions();
+
