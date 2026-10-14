@@ -34,7 +34,9 @@ import {
   AlertTriangle,
   Eye,
   RefreshCw,
+  ZoomIn,
 } from 'lucide-react';
+import { ImageInspectorModal } from './ImageInspectorModal';
 import {
   analyzeAssetUrl,
   compressImageToWebP,
@@ -134,6 +136,7 @@ export const ContentModal: React.FC<ContentModalProps> = ({
   const [imageInputMode, setImageInputMode] = useState<'link' | 'upload'>('link');
   const [isCompressingImage, setIsCompressingImage] = useState(false);
   const [compressNotice, setCompressNotice] = useState<string | null>(null);
+  const [showInspector, setShowInspector] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [catatan, setCatatan] = useState('');
   const [checklistAsset, setChecklistAsset] = useState(false);
@@ -1145,11 +1148,15 @@ export const ContentModal: React.FC<ContentModalProps> = ({
                   </div>
 
                   {fotoUrlAnalysis.isEmbeddableImage ? (
-                    <div className="relative w-full h-36 rounded-lg overflow-hidden bg-slate-950 border border-slate-700/80 group/preview">
+                    <div
+                      onClick={() => setShowInspector(true)}
+                      className="relative w-full h-36 rounded-lg overflow-hidden bg-slate-950 border border-slate-700/80 group/preview cursor-zoom-in"
+                      title="Klik untuk periksa detail foto (Smart Image Inspector)"
+                    >
                       <img
                         src={fotoUrlAnalysis.convertedUrl}
                         alt="Pratinjau Sampul"
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover/preview:scale-105"
                         onError={(e) => {
                           const img = e.currentTarget;
                           if (fotoUrlAnalysis.fileId && img.src.includes('googleusercontent.com')) {
@@ -1170,6 +1177,14 @@ export const ContentModal: React.FC<ContentModalProps> = ({
                       </div>
                       <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/70 backdrop-blur-xs text-[10px] text-white font-medium">
                         {fotoUrlAnalysis.label}
+                      </div>
+
+                      {/* Hover Overlay with Zoom Prompt */}
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="px-3 py-1.5 rounded-full bg-red-600/90 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md">
+                          <ZoomIn className="w-3.5 h-3.5" />
+                          <span>Periksa Detail (Zoom)</span>
+                        </span>
                       </div>
                     </div>
                   ) : fotoUrlAnalysis.type === 'canva' ? (
@@ -1636,6 +1651,20 @@ export const ContentModal: React.FC<ContentModalProps> = ({
           }
         }}
       />
+
+      {/* Smart Image Inspector for Live Preview */}
+      {fotoUrlAnalysis.isEmbeddableImage && (
+        <ImageInspectorModal
+          isOpen={showInspector}
+          onClose={() => setShowInspector(false)}
+          imageUrl={fotoUrlAnalysis.convertedUrl}
+          originalUrl={fotoUrl}
+          title={tema || 'Pratinjau Foto Konten'}
+          klien={tipeProject === 'Internal' ? (klienInternal || 'Internal') : (klien || 'Klien')}
+          status={status}
+          assetLabel={fotoUrlAnalysis.label}
+        />
+      )}
     </>
   );
 };

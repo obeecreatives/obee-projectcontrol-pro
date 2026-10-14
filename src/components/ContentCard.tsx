@@ -15,8 +15,10 @@ import {
   MessageSquare,
   AtSign,
   Maximize2,
+  ZoomIn,
   X,
 } from 'lucide-react';
+import { ImageInspectorModal } from './ImageInspectorModal';
 
 interface ContentCardProps {
   item: ContentItem;
@@ -164,7 +166,14 @@ export const ContentCard: React.FC<ContentCardProps> = ({
       {item.FotoUrl && (
         <>
           {imageAnalysis.isEmbeddableImage ? (
-            <div className="relative w-full h-36 rounded-lg overflow-hidden bg-slate-900/50 border border-slate-700/60 group/cover">
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowLightbox(true);
+              }}
+              className="relative w-full h-36 rounded-lg overflow-hidden bg-slate-900/50 border border-slate-700/60 group/cover cursor-zoom-in"
+              title="Klik gambar untuk periksa detail (Smart Image Inspector)"
+            >
               <img
                 src={imageAnalysis.convertedUrl}
                 alt={item.Tema || 'Cover Kartu'}
@@ -188,18 +197,30 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 <ImageIcon className="w-4 h-4 text-slate-500" />
                 <span>Gambar tidak dapat dimuat</span>
               </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowLightbox(true);
-                }}
-                className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-md bg-black/75 hover:bg-black/95 text-white text-[10px] font-medium flex items-center gap-1 backdrop-blur-xs opacity-90 sm:opacity-0 group-hover/cover:opacity-100 transition-opacity cursor-pointer shadow-sm"
-                title="Klik untuk melihat ukuran penuh"
-              >
-                <Maximize2 className="w-3 h-3" />
+
+              {/* Hover Overlay with Clear 'Periksa Detail' Inspector Prompt */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/50 opacity-0 group-hover/cover:opacity-100 transition-all duration-200 flex flex-col justify-between p-2 pointer-events-none">
+                <div className="flex justify-end">
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/70 text-slate-200 backdrop-blur-xs border border-white/10 shadow-xs">
+                    {imageAnalysis.label}
+                  </span>
+                </div>
+                <div className="flex items-center justify-center">
+                  <span className="px-3 py-1.5 rounded-full bg-red-600/95 text-white text-xs font-bold flex items-center gap-1.5 shadow-xl shadow-black/60 backdrop-blur-xs transform scale-95 group-hover/cover:scale-100 transition-transform">
+                    <ZoomIn className="w-3.5 h-3.5" />
+                    <span>Periksa Detail</span>
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-300 text-center font-medium drop-shadow-sm">
+                  Klik untuk Memperbesar (Zoom & Pan)
+                </div>
+              </div>
+
+              {/* Mobile Quick-Zoom Indicator (Visible without hover) */}
+              <div className="absolute bottom-1.5 right-1.5 sm:hidden px-2 py-0.5 rounded-md bg-black/80 text-white text-[10px] font-medium flex items-center gap-1 backdrop-blur-xs shadow-sm pointer-events-none">
+                <ZoomIn className="w-3 h-3 text-red-400" />
                 <span>Zoom</span>
-              </button>
+              </div>
             </div>
           ) : imageAnalysis.type === 'canva' ? (
             <div className="w-full rounded-lg overflow-hidden p-2.5 bg-gradient-to-r from-teal-950/50 via-purple-950/50 to-pink-950/40 border border-cyan-500/40 flex items-center justify-between gap-2 shadow-xs">
@@ -541,59 +562,19 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         </div>
       </div>
 
-      {/* Fullscreen Lightbox Modal */}
-      {showLightbox && imageAnalysis.isEmbeddableImage && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-sm animate-fadeIn"
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowLightbox(false);
-          }}
-        >
-          <div
-            className="relative max-w-4xl max-h-[92vh] w-full bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-950/80">
-              <div className="flex items-center gap-2 truncate">
-                <ImageIcon className="w-4 h-4 text-slate-400 shrink-0" />
-                <span className="text-xs sm:text-sm font-semibold text-slate-200 truncate">
-                  {item.Tema || 'Pratinjau Sampul'}
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 shrink-0">
-                  {imageAnalysis.label}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <a
-                  href={item.FotoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition-colors"
-                  title="Buka gambar asli di tab baru"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Buka Asli</span>
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setShowLightbox(false)}
-                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
-                  title="Tutup"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-            <div className="p-3 sm:p-4 flex items-center justify-center overflow-auto bg-black/50">
-              <img
-                src={imageAnalysis.convertedUrl}
-                alt={item.Tema || 'Full Preview'}
-                className="max-h-[75vh] w-auto max-w-full object-contain rounded-lg shadow-lg"
-              />
-            </div>
-          </div>
-        </div>
+      {/* Smart Image Inspector Fullscreen Modal (Deep Inspection & Pan-Zoom) */}
+      {imageAnalysis.isEmbeddableImage && (
+        <ImageInspectorModal
+          isOpen={showLightbox}
+          onClose={() => setShowLightbox(false)}
+          imageUrl={imageAnalysis.convertedUrl}
+          originalUrl={item.FotoUrl}
+          title={item.Tema}
+          klien={item.Klien}
+          status={item.Status}
+          date={formatDateIndo(item.TanggalProduksi)}
+          assetLabel={imageAnalysis.label}
+        />
       )}
     </div>
   );
