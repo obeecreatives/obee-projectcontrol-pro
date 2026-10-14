@@ -380,3 +380,121 @@ export function formatRupiah(amount: number): string {
   return `Rp ${Number(amount || 0).toLocaleString(INDONESIA_LOCALE)}`;
 }
 
+/**
+ * Dapatkan informasi bulan & tahun saat ini (WIB / Asia/Jakarta)
+ */
+export function getCurrentMonthInfo(): {
+  monthIndex: number;
+  monthName: string;
+  year: number;
+  key: string;
+} {
+  const today = parseDateSafe(getTodayIndoDateString()) || {
+    year: new Date().getFullYear(),
+    month: new Date().getMonth(),
+    day: new Date().getDate(),
+  };
+  const monthIndex = today.month;
+  const monthName = BULAN_INDONESIA[monthIndex] || 'Oktober';
+  const year = today.year || new Date().getFullYear();
+  return {
+    monthIndex,
+    monthName,
+    year,
+    key: `${monthName} ${year}`,
+  };
+}
+
+/**
+ * Ekstrak kunci periode bulan dari kartu (contoh: "Oktober 2026")
+ */
+export function getCardMonthKey(item: {
+  TanggalProduksi?: string;
+  Bulan?: string;
+  Tahun?: string | number;
+}): string {
+  if (item.TanggalProduksi) {
+    const parsed = parseDateSafe(item.TanggalProduksi);
+    if (parsed) {
+      return `${BULAN_INDONESIA[parsed.month]} ${parsed.year}`;
+    }
+  }
+
+  if (item.Bulan) {
+    const cleanBulan = normalizeBulanIndo(item.Bulan);
+    const yr = Number(item.Tahun) || new Date().getFullYear();
+    if (cleanBulan) {
+      return `${cleanBulan} ${yr}`;
+    }
+  }
+
+  return '';
+}
+
+/**
+ * Cek apakah kartu termasuk kartu tertunda (carry-over) dari bulan sebelumnya:
+ * Yaitu kartu yang belum tayang/selesai (Status !== 'Published') dan tanggal produksinya sebelum bulan berjalan
+ */
+export function isCardCarryOver(
+  item: { TanggalProduksi?: string; Bulan?: string; Tahun?: string | number; Status?: string },
+  currentMonthInfo = getCurrentMonthInfo()
+): boolean {
+  // Kartu yang sudah Published bukan carry-over
+  if (item.Status === 'Published') return false;
+
+  const currentStartTimestamp = new Date(currentMonthInfo.year, currentMonthInfo.monthIndex, 1).getTime();
+
+  if (item.TanggalProduksi) {
+    const parsed = parseDateSafe(item.TanggalProduksi);
+    if (parsed) {
+      const cardDate = new Date(parsed.year, parsed.month, parsed.day).getTime();
+      return cardDate < currentStartTimestamp;
+    }
+  }
+
+  if (item.Bulan) {
+    const cleanBulan = normalizeBulanIndo(item.Bulan);
+    const mIdx = BULAN_INDONESIA.indexOf(cleanBulan);
+    const yr = Number(item.Tahun) || currentMonthInfo.year;
+    if (mIdx >= 0) {
+      const cardApproxDate = new Date(yr, mIdx, 28).getTime();
+      return cardApproxDate < currentStartTimestamp;
+    }
+  }
+
+  // Jika tanpa tanggal dan status masih aktif, anggap sebagai ide/backlog aktif
+  return true;
+}
+
+/**
+ * Filter utama pengecekan apakah kartu masuk ke periode yang dipilih
+ */
+export function isCardInPeriod(
+  item: { TanggalProduksi?: string; Bulan?: string; Tahun?: string | number; Status?: string },
+  selectedMonth: string,
+  includeCarryOver = true
+): boolean {
+  if (selectedMonth === 'ALL') return true;
+
+  const currentInfo = getCurrentMonthInfo();
+  const currentKey = currentInfo.key;
+  const isCurrentSelection = selectedMonth === 'CURRENT' || selectedMonth === currentKey;
+  const targetKey = isCurrentSelection ? currentKey : selectedMonth;
+
+  const cardKey = getCardMonthKey(item);
+
+  // 1. Kartu memang terjadwal untuk bulan ini / bulan terpilih
+  if (cardKey && cardKey.toLowerCase() === targetKey.toLowerCase()) {
+    return true;
+  }
+
+  // 2. Jika periode bulan berjalan dipilih dan opsi carry-over aktif:
+  // Sertakan kartu aktif yang belum Published dari bulan lampau
+  if (isCurrentSelection && includeCarryOver) {
+    return isCardCarryOver(item, currentInfo);
+  }
+
+  return false;
+}
+
+

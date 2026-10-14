@@ -19,6 +19,7 @@ import {
   Cloud,
   FileSpreadsheet,
 } from 'lucide-react';
+import { isCardInPeriod, getCurrentMonthInfo } from '../utils/dateFormatter';
 
 interface KanbanBoardProps {
   items: ContentItem[];
@@ -35,6 +36,10 @@ interface KanbanBoardProps {
   onTriggerSync?: () => void;
   onOpenSyncModal?: () => void;
   highlightedCardId?: string | null;
+  selectedMonth?: string;
+  onSelectMonth?: (month: string) => void;
+  includeCarryOver?: boolean;
+  onToggleCarryOver?: (include: boolean) => void;
 }
 
 const COLUMNS: { id: StatusType; label: string; color: string; dotColor: string }[] = [
@@ -61,6 +66,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onTriggerSync,
   onOpenSyncModal,
   highlightedCardId,
+  selectedMonth = 'CURRENT',
+  onSelectMonth,
+  includeCarryOver = true,
+  onToggleCarryOver,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedKlien, setSelectedKlien] = useState<string>('ALL');
@@ -119,6 +128,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
   const filteredItems = useMemo(() => {
     return items.filter((it) => {
+      // 1. Filter Periode Bulan (Default: Bulan Berjalan + Kartu Belum Selesai dari Bulan Lalu)
+      if (selectedMonth && !isCardInPeriod(it, selectedMonth, includeCarryOver)) {
+        return false;
+      }
+
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const match =
@@ -151,7 +165,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
       return true;
     });
-  }, [items, searchQuery, selectedKlien, selectedTipe, selectedCreator, startDate, endDate]);
+  }, [items, selectedMonth, includeCarryOver, searchQuery, selectedKlien, selectedTipe, selectedCreator, startDate, endDate]);
 
   const resetFilters = () => {
     setSearchQuery('');
@@ -292,12 +306,21 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               </button>
             </div>
 
-            {/* Content Summary Count */}
-            <div className={`text-xs ${isDarkMode ? 'text-slate-400 bg-slate-900/60 border-slate-800' : 'text-slate-600 bg-slate-100 border-slate-200'} border px-2.5 py-1.5 rounded-xl shrink-0 font-medium`}>
+            {/* Content Summary Count & Active Month Indicator */}
+            <div className={`flex items-center gap-1.5 text-xs ${isDarkMode ? 'text-slate-400 bg-slate-900/60 border-slate-800' : 'text-slate-600 bg-slate-100 border-slate-200'} border px-2.5 py-1.5 rounded-xl shrink-0 font-medium`}>
               <span className="hidden sm:inline">Menampilkan </span>
               <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'} tabular-nums`}>{filteredItems.length}</span>
               <span className="text-slate-400">/{items.length}</span>
               <span className="hidden sm:inline"> konten</span>
+              {selectedMonth && (
+                <span className="ml-1 text-[11px] font-bold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded-md border border-red-500/20">
+                  {selectedMonth === 'CURRENT'
+                    ? `${getCurrentMonthInfo().monthName}`
+                    : selectedMonth === 'ALL'
+                    ? 'Semua'
+                    : selectedMonth}
+                </span>
+              )}
             </div>
           </div>
         </div>

@@ -7,6 +7,7 @@ import {
   HARI_INDONESIA_PENDEK,
   formatDateIndo,
   getTodayIndoDateString,
+  getCurrentMonthInfo,
 } from '../utils/dateFormatter';
 
 interface CalendarViewProps {
@@ -14,20 +15,18 @@ interface CalendarViewProps {
   activeRole: UserRole;
   onEditItem: (item: ContentItem) => void;
   isDarkMode?: boolean;
+  selectedMonth?: string;
 }
 
-export const CalendarView: React.FC<CalendarViewProps> = ({ items, activeRole, onEditItem, isDarkMode = true }) => {
+export const CalendarView: React.FC<CalendarViewProps> = ({
+  items,
+  activeRole,
+  onEditItem,
+  isDarkMode = true,
+  selectedMonth = 'CURRENT',
+}) => {
   // Tentukan bulan awal berdasarkan tanggal item yang ada di dataset atau hari ini
   const initialDate = useMemo(() => {
-    // Cari tanggal posting pertama yang valid jika ada
-    for (const item of items) {
-      if (item.JadwalPosting) {
-        const parsed = parseDateSafe(item.JadwalPosting);
-        if (parsed) {
-          return new Date(parsed.year, parsed.month, 1);
-        }
-      }
-    }
     const todayParsed = parseDateSafe(getTodayIndoDateString());
     return todayParsed ? new Date(todayParsed.year, todayParsed.month, 1) : new Date();
   }, [items]);
@@ -35,6 +34,20 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ items, activeRole, o
   const [currentDate, setCurrentDate] = useState<Date>(initialDate);
   const [selectedKlien, setSelectedKlien] = useState<string>('ALL');
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
+
+  // Sinkronisasi kalender saat periode bulan di header diubah oleh user
+  React.useEffect(() => {
+    if (!selectedMonth || selectedMonth === 'ALL') return;
+    const currentInfo = getCurrentMonthInfo();
+    const targetKey = selectedMonth === 'CURRENT' ? currentInfo.key : selectedMonth;
+    const [monthName, yearStr] = targetKey.split(' ');
+    const mIdx = BULAN_INDONESIA.indexOf(monthName);
+    const yr = Number(yearStr);
+    if (mIdx >= 0 && yr > 2000) {
+      setCurrentDate(new Date(yr, mIdx, 1));
+      setSelectedDay(null);
+    }
+  }, [selectedMonth]);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();

@@ -136,6 +136,16 @@ class StorageService {
         }
       });
 
+      // Ensure October 2026 sample items are available if dataset doesn't have October yet
+      const hasOctober = parsed.some((it) => it.Bulan === 'Oktober' || it.TanggalProduksi?.startsWith('2026-10'));
+      if (!hasOctober) {
+        const octSeed = INITIAL_CONTENT_ITEMS.filter((it) => it.ID.startsWith('oct-content-'));
+        if (octSeed.length > 0) {
+          parsed.push(...octSeed);
+          hasMigrated = true;
+        }
+      }
+
       if (photosUpdated) {
         try {
           localStorage.setItem(KEY_CARD_PHOTOS, JSON.stringify(cardPhotos));

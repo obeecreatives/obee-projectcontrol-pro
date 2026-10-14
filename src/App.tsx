@@ -28,6 +28,12 @@ import { PWAInstallButton } from './components/PWAInstallButton';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { ROLES } from './data/seedData';
 import {
+  getCurrentMonthInfo,
+  getCardMonthKey,
+  isCardCarryOver,
+  BULAN_INDONESIA,
+} from './utils/dateFormatter';
+import {
   CheckCircle2,
   AlertCircle,
   Info,
@@ -68,6 +74,53 @@ export default function App() {
   });
   const [gasUrl, setGasUrl] = useState<string>(() => storageService.getGasUrl());
   const [menuPermissionsVersion, setMenuPermissionsVersion] = useState<number>(0);
+
+  // Month Period Filter State (Default: Bulan Berjalan / Oktober)
+  const [selectedMonth, setSelectedMonth] = useState<string>('CURRENT');
+  const [includeCarryOver, setIncludeCarryOver] = useState<boolean>(true);
+
+  const currentMonthInfo = React.useMemo(() => getCurrentMonthInfo(), []);
+
+  const { availableMonths, carryOverCount } = React.useMemo(() => {
+    const monthCounts: Record<string, number> = {};
+    let pendingCarryOver = 0;
+
+    items.forEach((it) => {
+      const k = getCardMonthKey(it);
+      if (k) {
+        monthCounts[k] = (monthCounts[k] || 0) + 1;
+      }
+      if (isCardCarryOver(it, currentMonthInfo)) {
+        pendingCarryOver++;
+      }
+    });
+
+    // Pastikan bulan berjalan selalu ada di daftar pilihan
+    if (!monthCounts[currentMonthInfo.key]) {
+      monthCounts[currentMonthInfo.key] = 0;
+    }
+
+    // Urutkan bulan dari yang terbaru (tahun desc, bulan desc)
+    const sortedKeys = Object.keys(monthCounts).sort((a, b) => {
+      const [mA, yA] = a.split(' ');
+      const [mB, yB] = b.split(' ');
+      const yearDiff = (Number(yB) || 0) - (Number(yA) || 0);
+      if (yearDiff !== 0) return yearDiff;
+      return BULAN_INDONESIA.indexOf(mB) - BULAN_INDONESIA.indexOf(mA);
+    });
+
+    const monthOptions = sortedKeys.map((key) => ({
+      value: key,
+      label: key === currentMonthInfo.key ? `${key} (Bulan Ini)` : key,
+      count: monthCounts[key],
+      isCurrent: key === currentMonthInfo.key,
+    }));
+
+    return {
+      availableMonths: monthOptions,
+      carryOverCount: pendingCarryOver,
+    };
+  }, [items, currentMonthInfo]);
 
   // Dark Mode State
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -478,6 +531,12 @@ export default function App() {
         onSyncAll={handleSyncAllData}
         isSyncing={isGlobalSyncing}
         onOpenSyncModal={() => setIsSyncModalOpen(true)}
+        selectedMonth={selectedMonth}
+        onSelectMonth={setSelectedMonth}
+        availableMonths={availableMonths}
+        includeCarryOver={includeCarryOver}
+        onToggleCarryOver={setIncludeCarryOver}
+        carryOverCount={carryOverCount}
       />
 
       {/* 2. Workspace Body Container (Sidebar di Bawah Header + Main Viewport) */}
@@ -516,6 +575,10 @@ export default function App() {
               onTriggerSync={handleTriggerTwoWaySync}
               onOpenSyncModal={() => setIsSyncModalOpen(true)}
               highlightedCardId={highlightedCardId}
+              selectedMonth={selectedMonth}
+              onSelectMonth={setSelectedMonth}
+              includeCarryOver={includeCarryOver}
+              onToggleCarryOver={setIncludeCarryOver}
             />
           )}
 
@@ -525,6 +588,7 @@ export default function App() {
               activeRole={activeRole}
               onEditItem={handleOpenEditModal}
               isDarkMode={isDarkMode}
+              selectedMonth={selectedMonth}
             />
           )}
 

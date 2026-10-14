@@ -23,6 +23,7 @@ import {
   PanelLeftOpen,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Sun,
   Moon,
   Maximize2,
@@ -30,6 +31,7 @@ import {
   RefreshCw,
   FileSpreadsheet,
 } from 'lucide-react';
+import { getCurrentMonthInfo } from '../utils/dateFormatter';
 
 interface NavbarProps {
   currentTab: ViewTab;
@@ -51,6 +53,12 @@ interface NavbarProps {
   onSyncAll?: () => void;
   isSyncing?: boolean;
   onOpenSyncModal?: () => void;
+  selectedMonth?: string;
+  onSelectMonth?: (month: string) => void;
+  availableMonths?: { value: string; label: string; count: number; isCurrent?: boolean }[];
+  includeCarryOver?: boolean;
+  onToggleCarryOver?: (include: boolean) => void;
+  carryOverCount?: number;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -72,7 +80,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSyncAll,
   isSyncing = false,
   onOpenSyncModal,
+  selectedMonth,
+  onSelectMonth,
+  availableMonths = [],
+  includeCarryOver = true,
+  onToggleCarryOver,
+  carryOverCount = 0,
 }) => {
+  const currentMonthInfo = getCurrentMonthInfo();
+  const currentMonthName = currentMonthInfo.monthName;
   const roleConfig = ROLES[activeRole] || ROLES.project_manager;
   const canAccessRoleSwitching = Boolean(
     currentUser?.isAdmin &&
@@ -227,6 +243,89 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Center Section: Dropdown Periode Bulan (Sesuai Lingkaran Merah Header) */}
+        {selectedMonth && onSelectMonth && ['board', 'calendar', 'dashboard'].includes(currentTab) && (
+          <div className="flex items-center gap-1.5 sm:gap-2.5 mx-auto lg:mx-0">
+            {/* Dropdown Container */}
+            <div
+              className={`relative flex items-center ${
+                isDarkMode
+                  ? 'bg-slate-900/95 border-slate-700/80 hover:border-red-500/60 text-white'
+                  : 'bg-white border-slate-300 hover:border-red-400 text-slate-900 shadow-sm'
+              } border rounded-xl px-2.5 py-1 sm:py-1.5 transition-all shadow-sm`}
+            >
+              <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-500 shrink-0 mr-1.5 sm:mr-2" />
+              
+              <div className="flex flex-col text-left">
+                <span className="hidden sm:inline text-[9px] uppercase tracking-wider font-extrabold text-slate-400 leading-none">
+                  Periode Bulan
+                </span>
+                <div className="flex items-center gap-1">
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => onSelectMonth(e.target.value)}
+                    className={`bg-transparent text-xs sm:text-sm font-black focus:outline-none cursor-pointer pr-4 appearance-none ${
+                      isDarkMode ? 'text-white' : 'text-slate-900'
+                    }`}
+                    title="Pilih Periode Bulan untuk memfilter kartu secara otomatis"
+                  >
+                    <option value="CURRENT" className={isDarkMode ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>
+                      🌟 Bulan Berjalan ({currentMonthName})
+                    </option>
+                    <option value="ALL" className={isDarkMode ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>
+                      📋 Semua Periode (Semua Bulan)
+                    </option>
+                    {availableMonths &&
+                      availableMonths
+                        .filter((m) => !m.isCurrent)
+                        .map((m) => (
+                          <option
+                            key={m.value}
+                            value={m.value}
+                            className={isDarkMode ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}
+                          >
+                            📅 {m.label} ({m.count} kartu)
+                          </option>
+                        ))}
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 -ml-3 pointer-events-none shrink-0" />
+                </div>
+              </div>
+            </div>
+
+            {/* Carry-over Toggle Button (Sertakan Kartu Tertunda Bulan Lalu) */}
+            {(selectedMonth === 'CURRENT' || selectedMonth.toLowerCase().includes(currentMonthName.toLowerCase())) && onToggleCarryOver && (
+              <button
+                type="button"
+                onClick={() => onToggleCarryOver(!includeCarryOver)}
+                className={`hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                  includeCarryOver
+                    ? isDarkMode
+                      ? 'bg-amber-950/40 text-amber-300 border-amber-600/40 hover:bg-amber-900/40'
+                      : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                    : isDarkMode
+                    ? 'bg-slate-900/60 text-slate-400 border-slate-800 hover:text-slate-300'
+                    : 'bg-slate-100 text-slate-500 border-slate-200 hover:text-slate-700'
+                }`}
+                title={
+                  includeCarryOver
+                    ? `Kartu aktif dari bulan lalu ikut ditampilkan (${carryOverCount} kartu) agar tidak terlewat. Klik untuk menyembunyikan.`
+                    : 'Klik untuk menyertakan kartu aktif yang belum selesai dari bulan lalu.'
+                }
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    includeCarryOver ? 'bg-amber-400 animate-pulse' : 'bg-slate-500'
+                  }`}
+                />
+                <span>
+                  {includeCarryOver ? `+${carryOverCount} Tertunda` : 'Murni Bulan Ini'}
+                </span>
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Right Section */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
