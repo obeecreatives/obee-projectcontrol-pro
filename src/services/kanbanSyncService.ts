@@ -5,6 +5,7 @@ import {
   normalizeDateToYMD,
   getBulanIndoFromDate,
   getTahunFromDate,
+  normalizeBulanIndo,
 } from '../utils/dateFormatter';
 
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'pending' | 'error';
@@ -507,7 +508,7 @@ export class KanbanSyncService {
           ID: id,
           Klien: r.Klien || r.klien || 'Klien Baru',
           TanggalProduksi: cleanProdDate,
-          Bulan: r.Bulan || r.bulan || (cleanProdDate ? getBulanIndoFromDate(cleanProdDate) : ''),
+          Bulan: normalizeBulanIndo(r.Bulan || r.bulan, cleanProdDate),
           Tahun: Number(r.Tahun || r.tahun) || (cleanProdDate ? getTahunFromDate(cleanProdDate) : new Date().getFullYear()),
           Tema: r.Tema || r.tema || r.IdeKonten || 'Konten',
           IdeKonten: r.IdeKonten || r.ide_konten || '',

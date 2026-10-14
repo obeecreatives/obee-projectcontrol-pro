@@ -6,6 +6,7 @@ import {
   getBulanIndoFromDate,
   getTahunFromDate,
   normalizeDateToYMD,
+  normalizeBulanIndo,
 } from '../utils/dateFormatter';
 
 const KEY_CONTENT = 'obee_pcs_content_v1';
@@ -122,6 +123,17 @@ class StorageService {
           cardPhotos[it.ID] = it.FotoUrl;
           photosUpdated = true;
         }
+
+        // Auto-normalize Bulan & Tahun ke standar resmi Bahasa Indonesia (id-ID)
+        const normalizedBulan = normalizeBulanIndo(it.Bulan, it.TanggalProduksi);
+        if (normalizedBulan && it.Bulan !== normalizedBulan) {
+          it.Bulan = normalizedBulan;
+          hasMigrated = true;
+        }
+        if (it.TanggalProduksi && !it.Tahun) {
+          it.Tahun = getTahunFromDate(it.TanggalProduksi);
+          hasMigrated = true;
+        }
       });
 
       if (photosUpdated) {
@@ -170,7 +182,7 @@ class StorageService {
     let previousStatus: StatusType | undefined;
     const todayIndo = getTodayIndoDateString();
     const prodDate = itemData.TanggalProduksi ? normalizeDateToYMD(itemData.TanggalProduksi) : todayIndo;
-    const calcBulan = itemData.Bulan || getBulanIndoFromDate(prodDate);
+    const calcBulan = normalizeBulanIndo(itemData.Bulan, prodDate);
     const calcTahun = itemData.Tahun || getTahunFromDate(prodDate);
 
     const existingIndex = list.findIndex((it) => it.ID === targetId);
@@ -186,8 +198,8 @@ class StorageService {
         ...itemData,
         ID: targetId,
         TanggalProduksi: finalProdDate,
-        Bulan: itemData.Bulan || existingItem.Bulan || (finalProdDate ? getBulanIndoFromDate(finalProdDate) : calcBulan),
-        Tahun: itemData.Tahun || existingItem.Tahun || (finalProdDate ? getTahunFromDate(finalProdDate) : calcTahun),
+        Bulan: normalizeBulanIndo(itemData.Bulan || existingItem.Bulan, finalProdDate),
+        Tahun: itemData.Tahun || (finalProdDate ? getTahunFromDate(finalProdDate) : existingItem.Tahun || calcTahun),
         JadwalPosting: itemData.JadwalPosting !== undefined ? normalizeDateToYMD(itemData.JadwalPosting) : existingItem.JadwalPosting,
         FotoUrl: finalFoto,
         UpdatedAt: nowIso,

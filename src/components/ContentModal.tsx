@@ -47,6 +47,7 @@ import {
   getBulanIndoFromDate,
   getTahunFromDate,
   formatRelativeTimeIndo,
+  normalizeBulanIndo,
 } from '../utils/dateFormatter';
 
 interface ContentModalProps {
@@ -298,8 +299,8 @@ export const ContentModal: React.FC<ContentModalProps> = ({
       TipeProject: tipeProject,
       Klien: finalKlien,
       TanggalProduksi: cleanTanggalProduksi,
-      Bulan: editingItem?.Bulan || (cleanTanggalProduksi ? getBulanIndoFromDate(cleanTanggalProduksi) : ''),
-      Tahun: editingItem?.Tahun || (cleanTanggalProduksi ? getTahunFromDate(cleanTanggalProduksi) : new Date().getFullYear()),
+      Bulan: normalizeBulanIndo(editingItem?.Bulan, cleanTanggalProduksi),
+      Tahun: cleanTanggalProduksi ? getTahunFromDate(cleanTanggalProduksi) : editingItem?.Tahun || new Date().getFullYear(),
       JadwalPosting: cleanJadwalPosting,
       Tema: tema,
       IdeKonten: ideKonten,

@@ -167,6 +167,84 @@ export function normalizeDateToYMD(dateInput?: string | Date | null): string {
 }
 
 /**
+ * Kamus Pemetaan Bulan Bahasa Inggris & Variasi Singkatan ke Standar Bahasa Indonesia
+ */
+export const MONTH_TRANSLATION_MAP: Record<string, string> = {
+  // English full
+  january: 'Januari',
+  february: 'Februari',
+  march: 'Maret',
+  april: 'April',
+  may: 'Mei',
+  june: 'Juni',
+  july: 'Juli',
+  august: 'Agustus',
+  september: 'September',
+  october: 'Oktober',
+  november: 'November',
+  december: 'Desember',
+
+  // English / Indonesian short abbreviations
+  jan: 'Januari',
+  feb: 'Februari',
+  mar: 'Maret',
+  apr: 'April',
+  jun: 'Juni',
+  jul: 'Juli',
+  aug: 'Agustus',
+  agt: 'Agustus',
+  sep: 'September',
+  sept: 'September',
+  oct: 'Oktober',
+  okt: 'Oktober',
+  nov: 'November',
+  dec: 'Desember',
+  des: 'Desember',
+
+  // Indonesian full (variasi huruf kecil)
+  januari: 'Januari',
+  februari: 'Februari',
+  maret: 'Maret',
+  mei: 'Mei',
+  juni: 'Juni',
+  juli: 'Juli',
+  agustus: 'Agustus',
+  oktober: 'Oktober',
+  desember: 'Desember',
+};
+
+/**
+ * Normalisasi nama bulan ke standar resmi Bahasa Indonesia (contoh: "July" -> "Juli", "August" -> "Agustus").
+ * Jika parameter tanggal tersedia, tanggal digunakan sebagai sumber kebenaran (source of truth) utama.
+ */
+export function normalizeBulanIndo(
+  bulanInput?: string | null,
+  dateInput?: string | Date | null
+): string {
+  // 1. Jika tanggal tersedia dan valid, derivasi langsung dari tanggal agar 100% konsisten dengan TanggalProduksi
+  if (dateInput) {
+    const fromDate = getBulanIndoFromDate(dateInput);
+    if (fromDate) return fromDate;
+  }
+
+  // 2. Jika input teks bulan diberikan, cocokkan dengan kamus
+  if (!bulanInput) return '';
+  const clean = String(bulanInput).trim().toLowerCase();
+  if (MONTH_TRANSLATION_MAP[clean]) {
+    return MONTH_TRANSLATION_MAP[clean];
+  }
+
+  // 3. Jika berbentuk angka string atau nomor (1-12)
+  const num = parseInt(clean, 10);
+  if (!isNaN(num) && num >= 1 && num <= 12) {
+    return BULAN_INDONESIA[num - 1];
+  }
+
+  // 4. Default: kembalikan teks dengan huruf kapital di awal kata
+  return bulanInput.trim().charAt(0).toUpperCase() + bulanInput.trim().slice(1);
+}
+
+/**
  * Ekstrak Nama Bulan Indonesia (contoh: "September") dari tanggal
  */
 export function getBulanIndoFromDate(dateInput?: string | Date | null): string {
