@@ -74,6 +74,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSyncModal,
 }) => {
   const roleConfig = ROLES[activeRole] || ROLES.project_manager;
+  const canAccessRoleSwitching = Boolean(
+    currentUser?.isAdmin &&
+    ['project_manager', 'web_developer', 'admin', 'site_engineer'].includes(activeRole) &&
+    activeRole !== 'staff_creator' &&
+    activeRole !== 'client'
+  );
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
@@ -327,14 +333,24 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {/* RBAC Role Selector Badge */}
-          <button
-            onClick={onOpenRoleModal}
-            className={`hidden md:flex items-center gap-1.5 text-xs border px-2.5 py-1.5 rounded-lg font-medium transition-all ${roleConfig.badgeColor}`}
-            title="Peran RBAC"
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span className="font-semibold text-xs">{roleConfig.label}</span>
-          </button>
+          {canAccessRoleSwitching ? (
+            <button
+              onClick={onOpenRoleModal}
+              className={`hidden md:flex items-center gap-1.5 text-xs border px-2.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${roleConfig.badgeColor}`}
+              title="Ganti Peran RBAC"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span className="font-semibold text-xs">{roleConfig.label}</span>
+            </button>
+          ) : (
+            <div
+              className={`hidden md:flex items-center gap-1.5 text-xs border px-2.5 py-1.5 rounded-lg font-medium select-none ${roleConfig.badgeColor}`}
+              title={`Peran Sistem: ${roleConfig.label}`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span className="font-semibold text-xs">{roleConfig.label}</span>
+            </div>
+          )}
 
           {/* Logout Button */}
           <button

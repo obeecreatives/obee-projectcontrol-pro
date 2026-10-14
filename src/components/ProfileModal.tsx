@@ -42,6 +42,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   onLogout,
   isDarkMode = true,
 }) => {
+  if (!isOpen) return null;
+
   const [activeTab, setActiveTab] = useState<'profile' | 'pin' | 'role'>('profile');
   const [oldPin, setOldPin] = useState('');
   const [newPin, setNewPin] = useState('');
@@ -49,9 +51,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const [showPinText, setShowPinText] = useState(false);
   const [pinMessage, setPinMessage] = useState<{ text: string; ok: boolean } | null>(null);
 
-  if (!isOpen) return null;
-
   const roleConfig = ROLES[activeRole] || ROLES.project_manager;
+  const isPrivilegedAdmin = Boolean(
+    currentUser?.isAdmin &&
+    ['project_manager', 'web_developer', 'admin', 'site_engineer'].includes(activeRole) &&
+    activeRole !== 'staff_creator' &&
+    activeRole !== 'client'
+  );
+  const effectiveTab = (!isPrivilegedAdmin && activeTab === 'role') ? 'profile' : activeTab;
 
   const handleChangePin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,7 +143,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           <button
             onClick={() => setActiveTab('profile')}
             className={`pb-2.5 px-3 font-semibold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'profile'
+              effectiveTab === 'profile'
                 ? 'border-red-500 text-red-500'
                 : 'border-transparent text-slate-400 hover:opacity-80'
             }`}
@@ -148,7 +155,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           <button
             onClick={() => setActiveTab('pin')}
             className={`pb-2.5 px-3 font-semibold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'pin'
+              effectiveTab === 'pin'
                 ? 'border-red-500 text-red-500'
                 : 'border-transparent text-slate-400 hover:opacity-80'
             }`}
@@ -157,11 +164,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             <span>Ubah PIN</span>
           </button>
 
-          {currentUser?.isAdmin && (
+          {isPrivilegedAdmin && (
             <button
               onClick={() => setActiveTab('role')}
               className={`pb-2.5 px-3 font-semibold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'role'
+                effectiveTab === 'role'
                   ? 'border-red-500 text-red-500'
                   : 'border-transparent text-slate-400 hover:opacity-80'
               }`}
@@ -174,7 +181,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto flex flex-col gap-4 text-xs">
-          {activeTab === 'profile' && (
+          {effectiveTab === 'profile' && (
             <div className="flex flex-col gap-4">
               <div className={`p-4 ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-slate-50 border-slate-200'} border rounded-2xl flex flex-col gap-2.5`}>
                 <div className="flex items-center justify-between">
@@ -238,7 +245,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             </div>
           )}
 
-          {activeTab === 'pin' && (
+          {effectiveTab === 'pin' && (
             <form onSubmit={handleChangePin} className="flex flex-col gap-3.5">
               <p className="text-slate-400 leading-relaxed">
                 Ubah PIN keamanan Anda agar tidak ada yang bisa mengakses akun staf Anda dari perangkat lain.
@@ -316,7 +323,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             </form>
           )}
 
-          {activeTab === 'role' && currentUser?.isAdmin && (
+          {effectiveTab === 'role' && isPrivilegedAdmin && (
             <div className="flex flex-col gap-2.5">
               <p className="text-slate-400 leading-relaxed">
                 Sebagai <b>Admin / Project Manager</b>, Anda dapat menguji sudut pandang peran lain:
@@ -327,8 +334,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   <button
                     key={r.id}
                     onClick={() => {
-                      onSelectRole(r.id);
-                      onClose();
+                      if (isPrivilegedAdmin) {
+                        onSelectRole(r.id);
+                        onClose();
+                      }
                     }}
                     className={`p-3 rounded-xl border text-left flex items-center justify-between cursor-pointer ${
                       isSelected

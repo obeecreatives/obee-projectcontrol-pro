@@ -290,6 +290,10 @@ export default function App() {
   }, [activeRole, currentTab]);
 
   const handleSelectRole = (role: UserRole) => {
+    if (!currentUser?.isAdmin) {
+      addToast('Hanya Admin atau Web Developer yang dapat mengubah peran aktif.', 'error');
+      return;
+    }
     storageService.setRole(role);
     setActiveRole(role);
     if (!storageService.isTabAllowedForRole(role, currentTab)) {
@@ -432,6 +436,22 @@ export default function App() {
   }
 
   const roleConfig = ROLES[activeRole] || ROLES.project_manager;
+  const canAccessRoleSwitching = Boolean(
+    currentUser?.isAdmin &&
+    ['project_manager', 'web_developer', 'admin', 'site_engineer'].includes(activeRole) &&
+    activeRole !== 'staff_creator' &&
+    activeRole !== 'client'
+  );
+
+  const profileButtonLabel = (() => {
+    if (activeRole === 'staff_creator') {
+      if (currentUser && currentUser.role === 'staff_creator') {
+        return `Profil & Ganti PIN Staf (${currentUser.name})`;
+      }
+      return 'Profil & Ganti PIN Staf';
+    }
+    return `Profil & Keamanan PIN (${currentUser?.name || identityName})`;
+  })();
 
   return (
     <div className={`h-screen flex flex-col ${isDarkMode ? 'bg-[#0b0f17] text-slate-100' : 'bg-[#f8fafc] text-slate-900'} antialiased selection:bg-red-500 selection:text-white transition-colors overflow-hidden`}>
@@ -440,7 +460,9 @@ export default function App() {
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
         activeRole={activeRole}
-        onOpenRoleModal={() => setIsRoleModalOpen(true)}
+        onOpenRoleModal={() => {
+          if (canAccessRoleSwitching) setIsRoleModalOpen(true);
+        }}
         identityName={identityName}
         onOpenIdentityModal={() => setIsIdentityModalOpen(true)}
         onOpenNewContentModal={handleOpenNewContentModal}
@@ -775,16 +797,19 @@ export default function App() {
 
               <PWAInstallButton variant="drawer" isDarkMode={isDarkMode} />
 
-              <button
-                onClick={() => {
-                  setIsRoleModalOpen(true);
-                  setIsMobileMoreOpen(false);
-                }}
-                className={`flex items-center gap-2 p-3 ${isDarkMode ? 'bg-slate-900 border-slate-800 hover:bg-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-800'} border rounded-xl text-left font-semibold cursor-pointer`}
-              >
-                <ShieldCheck className="w-4 h-4 text-red-500" />
-                <span>Ubah Peran RBAC</span>
-              </button>
+              {/* Only show "Ubah Peran RBAC" if privileged admin */}
+              {canAccessRoleSwitching && (
+                <button
+                  onClick={() => {
+                    setIsRoleModalOpen(true);
+                    setIsMobileMoreOpen(false);
+                  }}
+                  className={`flex items-center gap-2 p-3 ${isDarkMode ? 'bg-slate-900 border-slate-800 hover:bg-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-800'} border rounded-xl text-left font-semibold cursor-pointer`}
+                >
+                  <ShieldCheck className="w-4 h-4 text-red-500" />
+                  <span>Ubah Peran RBAC</span>
+                </button>
+              )}
 
               <button
                 onClick={() => {
@@ -805,7 +830,7 @@ export default function App() {
                 className={`col-span-2 flex items-center gap-2 p-3 ${isDarkMode ? 'bg-slate-900 border-slate-800 hover:bg-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-800'} border rounded-xl text-left font-semibold cursor-pointer`}
               >
                 <User className="w-4 h-4 text-amber-500" />
-                <span>Profil & Keamanan PIN ({identityName})</span>
+                <span>{profileButtonLabel}</span>
               </button>
 
               <button
