@@ -739,6 +739,7 @@ export function parseSpreadsheetCsv(csvText: string): ContentItem[] {
         Status: (rowObj.Status as any) || 'New Idea',
         JadwalPosting: rowObj.JadwalPosting || '',
         File: rowObj.File || '',
+        FotoUrl: rowObj.FotoUrl || rowObj.foto_url || '',
         Catatan: rowObj.Catatan || '',
         FeeAmount: Number(rowObj.FeeAmount) || 0,
         CreatedAt: rowObj.CreatedAt || new Date().toISOString(),

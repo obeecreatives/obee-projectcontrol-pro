@@ -167,6 +167,7 @@ var COLUMN_HEADERS = [
   'Status',
   'JadwalPosting',
   'File',
+  'FotoUrl',
   'Catatan',
   'FeeAmount',
   'CreatedAt',

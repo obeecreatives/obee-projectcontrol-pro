@@ -78,6 +78,7 @@ export interface ContentItem {
   Status: StatusType;
   JadwalPosting?: string;
   File?: string;
+  FotoUrl?: string;
   Catatan?: string;
   FeeAmount: number;
   CreatedAt?: string;

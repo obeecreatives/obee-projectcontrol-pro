@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ContentItem, UserRole, StatusType, StaffUser } from '../types';
 import { ROLES } from '../data/seedData';
 import { formatDateIndo } from '../utils/dateFormatter';
+import { analyzeAssetUrl } from '../utils/imageUtils';
 import {
   ExternalLink,
   FolderOpen,
@@ -13,6 +14,8 @@ import {
   Image as ImageIcon,
   MessageSquare,
   AtSign,
+  Maximize2,
+  X,
 } from 'lucide-react';
 
 interface ContentCardProps {
@@ -89,6 +92,9 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     });
   }, [currentUser, item.comments]);
 
+  const [showLightbox, setShowLightbox] = useState(false);
+  const imageAnalysis = useMemo(() => analyzeAssetUrl(item.FotoUrl || ''), [item.FotoUrl]);
+
   // Calculate available statuses for this card & user role:
   const getAvailableStatuses = (): StatusType[] => {
     if (isClient) return [];
@@ -152,6 +158,118 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           <AtSign className="w-3 h-3 animate-pulse" />
           <span>Anda disebut di kartu ini</span>
         </div>
+      )}
+
+      {/* Card Visual / Cover Image / Brand Banner */}
+      {item.FotoUrl && (
+        <>
+          {imageAnalysis.isEmbeddableImage ? (
+            <div className="relative w-full h-36 rounded-lg overflow-hidden bg-slate-900/50 border border-slate-700/60 group/cover">
+              <img
+                src={imageAnalysis.convertedUrl}
+                alt={item.Tema || 'Cover Kartu'}
+                loading="lazy"
+                className="w-full h-full object-cover transition-transform duration-300 group-hover/cover:scale-105"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                  const fallback = (e.target as HTMLElement).nextElementSibling as HTMLElement;
+                  if (fallback) fallback.style.display = 'flex';
+                }}
+              />
+              <div
+                style={{ display: 'none' }}
+                className="w-full h-full flex-col items-center justify-center bg-slate-900/80 text-slate-400 text-[11px] gap-1 p-2 text-center"
+              >
+                <ImageIcon className="w-4 h-4 text-slate-500" />
+                <span>Gambar tidak dapat dimuat</span>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowLightbox(true);
+                }}
+                className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-md bg-black/75 hover:bg-black/95 text-white text-[10px] font-medium flex items-center gap-1 backdrop-blur-xs opacity-90 sm:opacity-0 group-hover/cover:opacity-100 transition-opacity cursor-pointer shadow-sm"
+                title="Klik untuk melihat ukuran penuh"
+              >
+                <Maximize2 className="w-3 h-3" />
+                <span>Zoom</span>
+              </button>
+            </div>
+          ) : imageAnalysis.type === 'canva' ? (
+            <div className="w-full rounded-lg overflow-hidden p-2.5 bg-gradient-to-r from-teal-950/50 via-purple-950/50 to-pink-950/40 border border-cyan-500/40 flex items-center justify-between gap-2 shadow-xs">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#00c4cc] to-[#7d2ae8] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
+                  C
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold text-cyan-300 flex items-center gap-1">
+                    <span>Canva Design</span>
+                    <span className="text-[9px] px-1 py-0.2 rounded bg-cyan-900/60 text-cyan-200">Aset</span>
+                  </p>
+                  <p className="text-[10px] text-slate-400 truncate max-w-[150px]">Tautan Desain Aktif</p>
+                </div>
+              </div>
+              <a
+                href={item.FotoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 flex items-center gap-1 transition-colors shrink-0"
+              >
+                <span>Buka</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          ) : imageAnalysis.type === 'capcut' ? (
+            <div className="w-full rounded-lg overflow-hidden p-2.5 bg-gradient-to-r from-slate-900 to-neutral-900 border border-neutral-700 flex items-center justify-between gap-2 shadow-xs">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-neutral-800 text-white flex items-center justify-center font-bold text-xs shrink-0 border border-white/20 shadow-sm">
+                  🎬
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold text-white flex items-center gap-1">
+                    <span>CapCut Project</span>
+                    <span className="text-[9px] px-1 py-0.2 rounded bg-neutral-800 text-neutral-300">Video</span>
+                  </p>
+                  <p className="text-[10px] text-slate-400 truncate max-w-[150px]">Tautan Project CapCut</p>
+                </div>
+              </div>
+              <a
+                href={item.FotoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center gap-1 transition-colors shrink-0"
+              >
+                <span>Buka</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          ) : imageAnalysis.type === 'figma' ? (
+            <div className="w-full rounded-lg overflow-hidden p-2.5 bg-purple-950/40 border border-purple-500/40 flex items-center justify-between gap-2 shadow-xs">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-purple-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
+                  F
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold text-purple-300">Figma Design</p>
+                  <p className="text-[10px] text-slate-400 truncate max-w-[150px]">Tautan Canvas Figma</p>
+                </div>
+              </div>
+              <a
+                href={item.FotoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 flex items-center gap-1 transition-colors shrink-0"
+              >
+                <span>Buka</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          ) : null}
+        </>
       )}
 
       {/* Card Header: Client & Tipe Tag */}
@@ -417,6 +535,61 @@ export const ContentCard: React.FC<ContentCardProps> = ({
           )}
         </div>
       </div>
+
+      {/* Fullscreen Lightbox Modal */}
+      {showLightbox && imageAnalysis.isEmbeddableImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-sm animate-fadeIn"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowLightbox(false);
+          }}
+        >
+          <div
+            className="relative max-w-4xl max-h-[92vh] w-full bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-950/80">
+              <div className="flex items-center gap-2 truncate">
+                <ImageIcon className="w-4 h-4 text-slate-400 shrink-0" />
+                <span className="text-xs sm:text-sm font-semibold text-slate-200 truncate">
+                  {item.Tema || 'Pratinjau Sampul'}
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 shrink-0">
+                  {imageAnalysis.label}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={item.FotoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition-colors"
+                  title="Buka gambar asli di tab baru"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Buka Asli</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setShowLightbox(false)}
+                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  title="Tutup"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="p-3 sm:p-4 flex items-center justify-center overflow-auto bg-black/50">
+              <img
+                src={imageAnalysis.convertedUrl}
+                alt={item.Tema || 'Full Preview'}
+                className="max-h-[75vh] w-auto max-w-full object-contain rounded-lg shadow-lg"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

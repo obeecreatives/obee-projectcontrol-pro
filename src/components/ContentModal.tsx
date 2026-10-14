@@ -28,7 +28,18 @@ import {
   MessageCircle,
   Sparkles,
   AlertCircle,
+  Image as ImageIcon,
+  UploadCloud,
+  Link as LinkIcon,
+  AlertTriangle,
+  Eye,
+  RefreshCw,
 } from 'lucide-react';
+import {
+  analyzeAssetUrl,
+  compressImageToWebP,
+  convertGoogleDriveToCdn,
+} from '../utils/imageUtils';
 import { AiAssistantModal, AiMode } from './AiAssistantModal';
 import {
   getTodayIndoDateString,
@@ -118,10 +129,17 @@ export const ContentModal: React.FC<ContentModalProps> = ({
   const [sourceReferences, setSourceReferences] = useState('');
   const [materiKonten, setMateriKonten] = useState('');
   const [file, setFile] = useState('');
+  const [fotoUrl, setFotoUrl] = useState('');
+  const [imageInputMode, setImageInputMode] = useState<'link' | 'upload'>('link');
+  const [isCompressingImage, setIsCompressingImage] = useState(false);
+  const [compressNotice, setCompressNotice] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [catatan, setCatatan] = useState('');
   const [checklistAsset, setChecklistAsset] = useState(false);
   const [checklistCaption, setChecklistCaption] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const fotoUrlAnalysis = useMemo(() => analyzeAssetUrl(fotoUrl), [fotoUrl]);
 
   // Form Validation & Lifecycle Guards
   const [formValidationError, setFormValidationError] = useState<string | null>(null);
@@ -202,6 +220,7 @@ export const ContentModal: React.FC<ContentModalProps> = ({
         setSourceReferences(editingItem.SourceReferences || '');
         setMateriKonten(editingItem.MateriKonten || '');
         setFile(editingItem.File || '');
+        setFotoUrl(editingItem.FotoUrl || '');
         setCatatan(editingItem.Catatan || '');
         setChecklistAsset(!!editingItem.ChecklistAsset);
         setChecklistCaption(!!editingItem.ChecklistCaption);
@@ -224,11 +243,14 @@ export const ContentModal: React.FC<ContentModalProps> = ({
         setSourceReferences('');
         setMateriKonten('');
         setFile('');
+        setFotoUrl('');
         setCatatan('');
         setChecklistAsset(false);
         setChecklistCaption(false);
         setCommentsList([]);
       }
+      setCompressNotice(null);
+      setImageInputMode('link');
       setActiveModalTab(editingItem && initialTab ? initialTab : 'detail');
       setIsSubmitting(false);
       setCommentText('');
@@ -290,6 +312,7 @@ export const ContentModal: React.FC<ContentModalProps> = ({
       SourceReferences: sourceReferences,
       MateriKonten: materiKonten,
       File: file,
+      FotoUrl: fotoUrl.trim(),
       Catatan: catatan,
       ChecklistAsset: checklistAsset,
       ChecklistCaption: checklistCaption,
@@ -317,6 +340,40 @@ export const ContentModal: React.FC<ContentModalProps> = ({
   };
 
   const allowedStatuses = getAllowedStatuses();
+
+  const handleFotoUrlChange = (value: string) => {
+    const trimmed = value.trim();
+    if (trimmed && (trimmed.includes('drive.google.com') || trimmed.includes('lh3.googleusercontent.com'))) {
+      const cdnUrl = convertGoogleDriveToCdn(trimmed, 800);
+      setFotoUrl(cdnUrl);
+    } else {
+      setFotoUrl(value);
+    }
+    setCompressNotice(null);
+  };
+
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsCompressingImage(true);
+    setCompressNotice('Mengompresi gambar ke WebP...');
+    try {
+      const res = await compressImageToWebP(file, 800, 800, 0.8);
+      setFotoUrl(res.base64);
+      const origKb = Math.round(res.originalSize / 1024);
+      const compKb = Math.round(res.compressedSize / 1024);
+      const percent = Math.max(0, Math.round(((res.originalSize - res.compressedSize) / res.originalSize) * 100));
+      setCompressNotice(`Foto berhasil dikompresi: ${origKb} KB ➔ ${compKb} KB (${percent}% lebih hemat)`);
+    } catch (err: any) {
+      setCompressNotice(`Gagal mengompresi gambar: ${err.message || 'File tidak didukung'}`);
+    } finally {
+      setIsCompressingImage(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   // Quick mention insert helper
   const handleInsertQuickMention = (staff: StaffUser) => {
@@ -915,6 +972,233 @@ export const ContentModal: React.FC<ContentModalProps> = ({
                     : 'bg-slate-50 text-slate-800 border-slate-300'
                 } border rounded-xl px-3 py-2 focus:outline-none focus:border-red-500 font-mono text-xs sm:text-sm`}
               />
+            </div>
+
+            {/* Foto / Visual Sampul Kartu (Cover) */}
+            <div
+              className={`p-4 rounded-xl border ${
+                isDarkMode ? 'bg-slate-900/70 border-slate-700/80' : 'bg-slate-50/80 border-slate-300'
+              } space-y-3`}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-300">
+                    <ImageIcon className="w-4 h-4 text-emerald-400" />
+                    <span>Foto / Sampul Visual Kartu</span>
+                    <span className="text-[10px] font-normal normal-case text-slate-400">(Opsional)</span>
+                  </label>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Mendukung link Google Drive (auto-CDN), Canva, CapCut, web image, atau pilih dari galeri/kamera HP.
+                  </p>
+                </div>
+
+                {/* Mode Selector Tabs */}
+                <div className="flex items-center bg-slate-800/80 p-0.5 rounded-lg border border-slate-700/60 text-[11px] self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setImageInputMode('link')}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors ${
+                      imageInputMode === 'link'
+                        ? 'bg-red-600 text-white font-medium shadow-xs'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <LinkIcon className="w-3 h-3" />
+                    <span>Link URL</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setImageInputMode('upload')}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors ${
+                      imageInputMode === 'upload'
+                        ? 'bg-red-600 text-white font-medium shadow-xs'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <UploadCloud className="w-3 h-3" />
+                    <span>Galeri / Kamera</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Mode: Link Input */}
+              {imageInputMode === 'link' ? (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={fotoUrl}
+                      onChange={(e) => handleFotoUrlChange(e.target.value)}
+                      placeholder="Tempel link Google Drive, Canva, CapCut, atau URL WebP/JPG..."
+                      className={`w-full ${
+                        isDarkMode
+                          ? 'bg-slate-950 text-slate-100 border-slate-700'
+                          : 'bg-white text-slate-800 border-slate-300'
+                      } border rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:border-red-500 font-mono`}
+                    />
+                    {fotoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFotoUrl('');
+                          setCompressNotice(null);
+                        }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-400 text-xs px-1.5 py-0.5 rounded bg-slate-800/60 transition-colors"
+                      >
+                        Hapus
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Smart Link Badge & Warning */}
+                  {fotoUrlAnalysis.warning && (
+                    <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-950/40 border border-amber-600/40 text-amber-300 text-xs">
+                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <span>{fotoUrlAnalysis.warning}</span>
+                    </div>
+                  )}
+
+                  {fotoUrl && !fotoUrlAnalysis.warning && (
+                    <div className="flex items-center gap-2 text-xs flex-wrap">
+                      <span className="text-slate-400">Terdeteksi:</span>
+                      <span
+                        className={`px-2 py-0.5 rounded-md font-semibold text-[11px] ${
+                          fotoUrlAnalysis.type === 'gdrive_file'
+                            ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-600/40'
+                            : fotoUrlAnalysis.type === 'canva'
+                            ? 'bg-cyan-950/60 text-cyan-300 border border-cyan-500/40'
+                            : fotoUrlAnalysis.type === 'capcut'
+                            ? 'bg-neutral-800 text-neutral-200 border border-neutral-600'
+                            : 'bg-blue-950/60 text-blue-300 border border-blue-500/40'
+                        }`}
+                      >
+                        {fotoUrlAnalysis.label}
+                      </span>
+                      {fotoUrlAnalysis.type === 'gdrive_file' && (
+                        <span className="text-[10px] text-emerald-400">✓ Dikonversi ke CDN Google w800</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Mode: Upload File with Auto-WebP Compression */
+                <div className="space-y-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageFileUpload}
+                    className="hidden"
+                    id="content-image-upload-input"
+                  />
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed ${
+                      isDarkMode
+                        ? 'border-slate-700 hover:border-red-500 bg-slate-950/40 hover:bg-slate-950/70'
+                        : 'border-slate-300 hover:border-red-500 bg-white hover:bg-slate-50'
+                    } rounded-xl p-4 text-center cursor-pointer transition-colors`}
+                  >
+                    <UploadCloud className="w-6 h-6 mx-auto text-slate-400 mb-1.5" />
+                    <p className="text-xs font-semibold text-slate-200">
+                      Klik untuk Ambil dari Galeri HP atau Kamera
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Sistem otomatis mengompresi gambar ke WebP ringan (~30 KB) secepat kilat.
+                    </p>
+                  </div>
+
+                  {isCompressingImage && (
+                    <div className="flex items-center justify-center gap-2 text-xs text-red-400 py-1">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Mengompresi gambar ke WebP...</span>
+                    </div>
+                  )}
+
+                  {compressNotice && !isCompressingImage && (
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-950/40 border border-emerald-600/40 text-emerald-300 text-xs">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>{compressNotice}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Live Preview Box */}
+              {fotoUrl && (
+                <div className="pt-2 border-t border-slate-700/60">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                      Pratinjau Tampilan pada Kartu:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFotoUrl('');
+                        setCompressNotice(null);
+                      }}
+                      className="text-[11px] text-red-400 hover:text-red-300 transition-colors"
+                    >
+                      Hapus Foto
+                    </button>
+                  </div>
+
+                  {fotoUrlAnalysis.isEmbeddableImage ? (
+                    <div className="relative w-full h-36 rounded-lg overflow-hidden bg-slate-950 border border-slate-700/80 group/preview">
+                      <img
+                        src={fotoUrlAnalysis.convertedUrl}
+                        alt="Pratinjau Sampul"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                          const fallback = (e.target as HTMLElement).nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                      <div
+                        style={{ display: 'none' }}
+                        className="w-full h-full flex-col items-center justify-center bg-slate-900 text-slate-400 text-xs gap-1 p-2 text-center"
+                      >
+                        <ImageIcon className="w-4 h-4 text-slate-500" />
+                        <span>Link tidak dapat memuat gambar secara langsung</span>
+                      </div>
+                      <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/70 backdrop-blur-xs text-[10px] text-white font-medium">
+                        {fotoUrlAnalysis.label}
+                      </div>
+                    </div>
+                  ) : fotoUrlAnalysis.type === 'canva' ? (
+                    <div className="w-full rounded-lg p-3 bg-gradient-to-r from-teal-950/60 via-purple-950/60 to-pink-950/40 border border-cyan-500/40 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#00c4cc] to-[#7d2ae8] text-white flex items-center justify-center font-black text-xs">
+                          C
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-cyan-300">Canva Design Link</p>
+                          <p className="text-[10px] text-slate-400 truncate max-w-[200px]">{fotoUrl}</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] px-2 py-1 rounded bg-cyan-500/20 text-cyan-300 font-semibold border border-cyan-500/40">
+                        Banner Aktif
+                      </span>
+                    </div>
+                  ) : fotoUrlAnalysis.type === 'capcut' ? (
+                    <div className="w-full rounded-lg p-3 bg-gradient-to-r from-slate-900 to-neutral-900 border border-neutral-700 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-neutral-800 text-white flex items-center justify-center font-bold text-xs border border-white/20">
+                          🎬
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-neutral-200">CapCut Project Link</p>
+                          <p className="text-[10px] text-slate-400 truncate max-w-[200px]">{fotoUrl}</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] px-2 py-1 rounded bg-white/10 text-neutral-200 font-semibold border border-white/20">
+                        Banner Aktif
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+              )}
             </div>
 
             {/* Checklist Asset & Caption */}
