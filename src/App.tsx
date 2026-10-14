@@ -493,6 +493,9 @@ export default function App() {
           onOpenLinksModal={() => setIsLinksModalOpen(true)}
           onOpenNewContentModal={handleOpenNewContentModal}
           isDarkMode={isDarkMode}
+          onSyncAll={handleSyncAllData}
+          isSyncing={isGlobalSyncing}
+          onOpenSyncModal={() => setIsSyncModalOpen(true)}
         />
 
         {/* Main Viewport Container */}

@@ -219,10 +219,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Divider */}
           <div className={`hidden lg:block h-6 w-px ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200'} mx-0.5`} />
 
-          {/* Desktop Breadcrumbs */}
+          {/* Desktop Active Tab Badge (Redundant "obeecreatives" removed for a more spacious header) */}
           <div className="hidden lg:flex items-center gap-2 text-sm">
-            <span className={`${isDarkMode ? 'text-slate-400' : 'text-slate-500'} font-medium`}>obeecreatives</span>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
             <div className={`flex items-center gap-1.5 font-bold ${isDarkMode ? 'text-white bg-slate-800/60 border-slate-700/50' : 'text-slate-900 bg-slate-100 border-slate-300/80'} border px-2.5 py-1 rounded-lg`}>
               {currentTabInfo.icon}
               <span>{currentTabInfo.title}</span>
@@ -260,42 +258,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* PWA Install Button (HP & PC) */}
           <PWAInstallButton isDarkMode={isDarkMode} variant="navbar" />
-
-          {/* Live Sync CRM & Database Staff Button */}
-          {onSyncAll && (
-            <div className="flex items-center">
-              <button
-                onClick={onSyncAll}
-                disabled={isSyncing}
-                className={`flex items-center gap-1.5 text-xs border ${
-                  onOpenSyncModal ? 'rounded-xl sm:rounded-l-xl sm:border-r-0' : 'rounded-xl'
-                } p-1.5 sm:px-2.5 sm:py-1.5 font-bold transition-all cursor-pointer ${
-                  isSyncing
-                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                    : isDarkMode
-                    ? 'bg-slate-800/90 border-slate-700 text-slate-200 hover:text-white hover:border-slate-600'
-                    : 'bg-white border-slate-300 text-slate-800 hover:bg-slate-50'
-                }`}
-                title="Tarik & Sinkronkan Data Terbaru dari Spreadsheet CRM dan Database Staff"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${isSyncing ? 'animate-spin text-amber-400' : ''}`} />
-                <span className="hidden lg:inline">{isSyncing ? 'Menyinkronkan...' : 'Sync CRM & Staf'}</span>
-              </button>
-              {onOpenSyncModal && (
-                <button
-                  onClick={onOpenSyncModal}
-                  className={`hidden sm:flex p-1.5 text-xs border rounded-r-xl transition-colors cursor-pointer ${
-                    isDarkMode
-                      ? 'bg-slate-800/90 border-slate-700 text-slate-400 hover:text-white hover:bg-slate-700'
-                      : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                  }`}
-                  title="Buka Pengaturan Link Spreadsheet CRM & Staff / Upload CSV"
-                >
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-red-400" />
-                </button>
-              )}
-            </div>
-          )}
 
           {/* 0.01s Instant Status Indicator */}
           <div className={`hidden xl:flex items-center gap-1.5 text-xs ${isDarkMode ? 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50' : 'text-emerald-700 bg-emerald-50 border-emerald-200'} border px-2.5 py-1.5 rounded-lg`}>

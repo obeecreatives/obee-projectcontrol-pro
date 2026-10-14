@@ -19,6 +19,8 @@ import {
   BookOpen,
   Sliders,
   Layers,
+  RefreshCw,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -30,6 +32,9 @@ interface SidebarProps {
   onOpenLinksModal: () => void;
   onOpenNewContentModal: () => void;
   isDarkMode?: boolean;
+  onSyncAll?: () => void;
+  isSyncing?: boolean;
+  onOpenSyncModal?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -40,8 +45,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeRole,
   onOpenLinksModal,
   isDarkMode = true,
+  onSyncAll,
+  isSyncing = false,
+  onOpenSyncModal,
 }) => {
   const roleConfig = ROLES[activeRole] || ROLES.project_manager;
+  const canManageSyncSettings = activeRole === 'admin' || activeRole === 'project_manager' || activeRole === 'site_engineer' || activeRole === 'web_developer';
 
   const allNavItems = [
     {
@@ -259,7 +268,84 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Footer & Sync Status */}
-      <div className={`border-t ${isDarkMode ? 'border-slate-800/80 bg-[#050a14]' : 'border-slate-200 bg-slate-100/80'} p-3 shrink-0 flex flex-col gap-2`}>
+      <div className={`border-t ${isDarkMode ? 'border-slate-800/80 bg-[#050a14]' : 'border-slate-200 bg-slate-100/80'} p-3 shrink-0 flex flex-col gap-2.5`}>
+        {/* Sync CRM & Staff Controls (Pindahan dari Navbar Atas) */}
+        {onSyncAll && (
+          !isCollapsed ? (
+            <div className="flex items-center gap-1.5 w-full">
+              <button
+                onClick={onSyncAll}
+                disabled={isSyncing}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl border font-bold text-xs transition-all cursor-pointer ${
+                  isSyncing
+                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                    : isDarkMode
+                    ? 'bg-slate-900/80 hover:bg-slate-800 text-slate-200 hover:text-white border-slate-700/80 hover:border-slate-600'
+                    : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-300 shadow-xs'
+                }`}
+                title="Tarik & Sinkronkan Data Terbaru dari Spreadsheet CRM dan Database Staff"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 shrink-0 text-emerald-400 ${isSyncing ? 'animate-spin text-amber-400' : ''}`} />
+                <span className="truncate">{isSyncing ? 'Menyinkronkan...' : 'Sync CRM & Staf'}</span>
+              </button>
+
+              {/* Buka Pengaturan Link: Disembunyikan dari Peran Staff */}
+              {canManageSyncSettings && onOpenSyncModal && (
+                <button
+                  onClick={onOpenSyncModal}
+                  className={`p-2 rounded-xl border transition-colors cursor-pointer shrink-0 ${
+                    isDarkMode
+                      ? 'bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-700/80 hover:border-slate-600'
+                      : 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border-slate-300 shadow-xs'
+                  }`}
+                  title="Buka Pengaturan Link Spreadsheet CRM & Staff / Upload CSV"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-red-500" />
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-1.5 w-full">
+              <button
+                onClick={onSyncAll}
+                disabled={isSyncing}
+                className={`w-10 h-10 mx-auto rounded-xl border flex items-center justify-center transition-all cursor-pointer relative group ${
+                  isSyncing
+                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                    : isDarkMode
+                    ? 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700'
+                    : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300 shadow-xs'
+                }`}
+                title={isSyncing ? 'Menyinkronkan...' : 'Sync CRM & Staf'}
+              >
+                <RefreshCw className={`w-4 h-4 text-emerald-400 ${isSyncing ? 'animate-spin text-amber-400' : ''}`} />
+                <div className={`fixed left-[84px] ${isDarkMode ? 'bg-slate-900 border-slate-700 text-slate-200' : 'bg-white border-slate-200 text-slate-800 shadow-lg'} border text-xs px-3 py-2 rounded-xl shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap`}>
+                  <div className="font-bold text-sm text-emerald-400">Sync CRM & Staf</div>
+                  <div className="text-xs text-slate-400 mt-0.5">Tarik data dari Google Sheets</div>
+                </div>
+              </button>
+
+              {/* Buka Pengaturan Link (Collapsed): Disembunyikan dari Peran Staff */}
+              {canManageSyncSettings && onOpenSyncModal && (
+                <button
+                  onClick={onOpenSyncModal}
+                  className={`w-10 h-10 mx-auto rounded-xl border flex items-center justify-center transition-all cursor-pointer relative group ${
+                    isDarkMode
+                      ? 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700'
+                      : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300 shadow-xs'
+                  }`}
+                  title="Buka Pengaturan Link Spreadsheet CRM & Staff / Upload CSV"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-red-500" />
+                  <div className={`fixed left-[84px] ${isDarkMode ? 'bg-slate-900 border-slate-700 text-slate-200' : 'bg-white border-slate-200 text-slate-800 shadow-lg'} border text-xs px-3 py-2 rounded-xl shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap`}>
+                    <div className="font-bold text-sm text-red-400">Pengaturan Spreadsheet</div>
+                    <div className="text-xs text-slate-400 mt-0.5">Edit Link Spreadsheet CRM & Staff</div>
+                  </div>
+                </button>
+              )}
+            </div>
+          )
+        )}
         {!isCollapsed && (
           <PWAInstallButton isDarkMode={isDarkMode} variant="sidebar" />
         )}
