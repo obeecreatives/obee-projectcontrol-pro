@@ -192,7 +192,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               </button>
               <div className="text-[9px] sm:text-[10px] font-bold text-sky-400 tracking-wider uppercase -mt-0.5">
-                CRM &bull; WORKSPACE OS
+                PROJECT CONTROL &bull; WORKSPACE OS
               </div>
             </div>
           </div>
