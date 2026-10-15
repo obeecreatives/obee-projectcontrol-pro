@@ -208,7 +208,12 @@ export const StaffDatabaseView: React.FC<StaffDatabaseViewProps> = ({
     if (ok) {
       const res = authService.deleteStaff(email);
       if (res.success) {
-        setDirectory(authService.getDirectory());
+        setDirectory((prev) => prev.filter((s) => s.email.toLowerCase() !== email.toLowerCase()));
+        await dialog.alert({
+          title: 'Staf Berhasil Dihapus',
+          message: `Data staf "${name}" (${email}) berhasil dihapus dari sistem obeecreatives.`,
+          variant: 'success',
+        });
       } else {
         await dialog.alert({
           title: 'Gagal Menghapus Staf',

@@ -509,7 +509,13 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
     if (ok) {
       const res = authService.removeWhitelistUser(user.email, currentUser?.email || 'Admin');
       if (res.success) {
+        setDirectory((prev) => prev.filter((s) => s.email.toLowerCase() !== user.email.toLowerCase()));
         refreshAll();
+        await dialog.alert({
+          title: 'Akun Berhasil Dihapus',
+          message: `Akun "${user.name}" (${user.email}) telah berhasil dihapus dari Whitelist sistem obeecreatives.`,
+          variant: 'success',
+        });
       } else {
         await dialog.alert({
           title: 'Gagal Menghapus Akun',

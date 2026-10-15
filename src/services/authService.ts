@@ -6,6 +6,7 @@ const KEY_STAFF_DIRECTORY = 'pcs_staff_directory_v1';
 const KEY_STAFF_PINS = 'pcs_staff_pins_v1';
 const KEY_DEFAULT_PASSWORDS = 'pcs_default_passwords_v1';
 const KEY_SECURITY_LOGS = 'pcs_security_logs_v1';
+const KEY_DELETED_WHITELIST = 'pcs_deleted_whitelist_v1';
 
 export const DEVELOPER_STANDARD_DEFAULT_PASSWORDS: DefaultPasswordConfig = {
   adminDefault: '8888',
@@ -186,25 +187,71 @@ export const INITIAL_STAFF_DIRECTORY: StaffUser[] = [
 ];
 
 class AuthService {
+  getDeletedWhitelist(): string[] {
+    try {
+      const raw = localStorage.getItem(KEY_DELETED_WHITELIST);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  recordDeletedWhitelist(email: string) {
+    const clean = email.toLowerCase().trim();
+    const current = this.getDeletedWhitelist();
+    if (!current.includes(clean)) {
+      current.push(clean);
+      localStorage.setItem(KEY_DELETED_WHITELIST, JSON.stringify(current));
+    }
+  }
+
+  unrecordDeletedWhitelist(email: string) {
+    const clean = email.toLowerCase().trim();
+    const current = this.getDeletedWhitelist().filter((e) => e !== clean);
+    localStorage.setItem(KEY_DELETED_WHITELIST, JSON.stringify(current));
+  }
+
   getDirectory(): StaffUser[] {
     try {
+      const deletedEmails = this.getDeletedWhitelist();
       const raw = localStorage.getItem(KEY_STAFF_DIRECTORY);
       if (!raw) {
-        this.setDirectory(INITIAL_STAFF_DIRECTORY);
-        return INITIAL_STAFF_DIRECTORY;
+        const initialFiltered = INITIAL_STAFF_DIRECTORY.filter(
+          (u) => !deletedEmails.includes(u.email.toLowerCase())
+        );
+        this.setDirectory(initialFiltered);
+        return initialFiltered;
       }
-      const list: StaffUser[] = JSON.parse(raw);
-      // Synchronize key full access accounts
+      let list: StaffUser[] = JSON.parse(raw);
+
+      // Purge any explicitly deleted staff from list if lingering
+      if (deletedEmails.length > 0) {
+        const beforeLen = list.length;
+        list = list.filter((u) => !deletedEmails.includes(u.email.toLowerCase()));
+        if (list.length !== beforeLen) {
+          this.setDirectory(list);
+        }
+      }
+
+      // Synchronize ONLY core system protected accounts (e.g. FULL_ACCESS_EMAILS).
+      // NEVER resurrect regular staff accounts that were deliberately deleted!
       let updated = false;
       INITIAL_STAFF_DIRECTORY.forEach((initUser) => {
+        const cleanInitEmail = initUser.email.toLowerCase();
+        const isCoreProtected = FULL_ACCESS_EMAILS.includes(cleanInitEmail);
+
         const found = list.find(
           (u) =>
-            u.email.toLowerCase() === initUser.email.toLowerCase() ||
+            u.email.toLowerCase() === cleanInitEmail ||
             (initUser.email === 'putrikriswardani@gmail.com' && u.email === 'febrina.putri@gmail.com')
         );
+
         if (!found) {
-          list.push(initUser);
-          updated = true;
+          // Only restore if this is a core protected account (Super Admin / Dev) and not explicitly removed
+          if (isCoreProtected && !deletedEmails.includes(cleanInitEmail)) {
+            list.push(initUser);
+            updated = true;
+          }
         } else {
           // Sync ID, bank, and contact info if missing
           if (!found.id.startsWith('STF-1') && initUser.id.startsWith('STF-1')) {
@@ -239,6 +286,7 @@ class AuthService {
           }
         }
       });
+
       // Also check any user in list
       list.forEach((u) => {
         if ((u.role as string) === 'vendor_lapangan') {
@@ -553,6 +601,7 @@ class AuthService {
     };
 
     dir.push(completeStaff);
+    this.unrecordDeletedWhitelist(cleanEmail);
     this.setDirectory(dir);
     this.setStaffPin(cleanEmail, initialPassword);
 
@@ -588,6 +637,9 @@ class AuthService {
     if (!target) {
       return { success: false, error: 'Akun tidak ditemukan di Whitelist.' };
     }
+
+    // Persist to tombstone registry so it never resurrects
+    this.recordDeletedWhitelist(cleanEmail);
 
     const updated = dir.filter((s) => s.email.toLowerCase() !== cleanEmail);
     this.setDirectory(updated);
