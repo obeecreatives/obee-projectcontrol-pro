@@ -13,4 +13,10 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator && import.meta
   });
 }
 
-createRoot(document.getElementById('root')!).render(<App />);
+import { DialogProvider } from './context/DialogContext';
+
+createRoot(document.getElementById('root')!).render(
+  <DialogProvider>
+    <App />
+  </DialogProvider>
+);

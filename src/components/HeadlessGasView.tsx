@@ -4,6 +4,7 @@ import { storageService } from '../services/storageService';
 import { liveSyncService } from '../services/liveSyncService';
 import { authService } from '../services/authService';
 import { kanbanSyncService } from '../services/kanbanSyncService';
+import { useConfirm } from '../context/DialogContext';
 import { parseSpreadsheetCsv } from '../data/seedData';
 import {
   Cpu,
@@ -44,6 +45,7 @@ export const HeadlessGasView: React.FC<HeadlessGasViewProps> = ({
   onSyncSuccess,
   isDarkMode = true,
 }) => {
+  const dialog = useConfirm();
   const [activeSubTab, setActiveSubTab] = useState<'all_sync' | 'crm_sync' | 'staff_sync' | 'content_sync'>('all_sync');
 
   // Unified / Global Sync State
@@ -156,9 +158,13 @@ export const HeadlessGasView: React.FC<HeadlessGasViewProps> = ({
     }
   };
 
-  const handlePasteCrmCsv = () => {
+  const handlePasteCrmCsv = async () => {
     if (!crmCsvInput.trim()) {
-      alert('Tempelkan teks CSV terlebih dahulu.');
+      await dialog.alert({
+        title: 'Input CSV Kosong',
+        message: 'Tempelkan teks format CSV CRM terlebih dahulu ke dalam kotak input.',
+        variant: 'warning',
+      });
       return;
     }
     const res = liveSyncService.syncCrmFromCsv(crmCsvInput);
@@ -214,9 +220,13 @@ export const HeadlessGasView: React.FC<HeadlessGasViewProps> = ({
     }
   };
 
-  const handlePasteStaffCsv = () => {
+  const handlePasteStaffCsv = async () => {
     if (!staffCsvInput.trim()) {
-      alert('Tempelkan teks CSV terlebih dahulu.');
+      await dialog.alert({
+        title: 'Input CSV Kosong',
+        message: 'Tempelkan teks format CSV Staf terlebih dahulu ke dalam kotak input.',
+        variant: 'warning',
+      });
       return;
     }
     const res = liveSyncService.syncStaffFromCsv(staffCsvInput);
@@ -262,7 +272,11 @@ export const HeadlessGasView: React.FC<HeadlessGasViewProps> = ({
   const handleSyncContent = async () => {
     let cleanUrl = (contentGasUrl || '').trim();
     if (!cleanUrl) {
-      alert('Masukkan URL Web App GAS terlebih dahulu!');
+      await dialog.alert({
+        title: 'URL Belum Diisi',
+        message: 'Masukkan URL Web App GAS terlebih dahulu untuk memulai sinkronisasi.',
+        variant: 'warning',
+      });
       return;
     }
     setIsSyncingContent(true);

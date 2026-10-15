@@ -3,6 +3,7 @@ import { StaffUser, ContentItem, UserRole } from '../types';
 import { authService } from '../services/authService';
 import { staffGasService, DEFAULT_STAFF_GAS_TEMPLATE, StaffComparisonResult, RemoteDiffItem } from '../services/staffGasService';
 import { ROLES } from '../data/seedData';
+import { useConfirm } from '../context/DialogContext';
 import {
   Users,
   UserPlus,
@@ -40,6 +41,7 @@ export const StaffDatabaseView: React.FC<StaffDatabaseViewProps> = ({
   activeRole,
   isDarkMode = true,
 }) => {
+  const dialog = useConfirm();
   const [subTab, setSubTab] = useState<'directory' | 'audit' | 'gas_setup'>('directory');
   const [directory, setDirectory] = useState<StaffUser[]>(() => authService.getDirectory());
   const [searchQuery, setSearchQuery] = useState('');
@@ -111,10 +113,14 @@ export const StaffDatabaseView: React.FC<StaffDatabaseViewProps> = ({
     return staffGasService.compareLocalWithRemote(directory, remote);
   }, [directory]);
 
-  const handleSaveStaff = (e: React.FormEvent) => {
+  const handleSaveStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name?.trim() || !formData.email?.trim()) {
-      alert('Nama dan Email wajib diisi.');
+      await dialog.alert({
+        title: 'Input Tidak Lengkap',
+        message: 'Nama dan Email staf wajib diisi.',
+        variant: 'warning',
+      });
       return;
     }
 
@@ -125,7 +131,11 @@ export const StaffDatabaseView: React.FC<StaffDatabaseViewProps> = ({
         setIsModalOpen(false);
         setEditingStaffEmail(null);
       } else {
-        alert(res.error || 'Gagal memperbarui data staf.');
+        await dialog.alert({
+          title: 'Gagal Memperbarui Staf',
+          message: res.error || 'Gagal memperbarui data staf.',
+          variant: 'danger',
+        });
       }
     } else {
       const newStaff: StaffUser = {
@@ -153,7 +163,11 @@ export const StaffDatabaseView: React.FC<StaffDatabaseViewProps> = ({
         setDirectory(authService.getDirectory());
         setIsModalOpen(false);
       } else {
-        alert(res.error || 'Gagal mendaftarkan staf baru.');
+        await dialog.alert({
+          title: 'Gagal Menambahkan Staf',
+          message: res.error || 'Gagal mendaftarkan staf baru.',
+          variant: 'danger',
+        });
       }
     }
   };
@@ -182,13 +196,25 @@ export const StaffDatabaseView: React.FC<StaffDatabaseViewProps> = ({
     setIsModalOpen(true);
   };
 
-  const handleDelete = (email: string, name: string) => {
-    if (window.confirm(`Yakin ingin menghapus "${name}" (${email}) dari database staf?`)) {
+  const handleDelete = async (email: string, name: string) => {
+    const ok = await dialog.confirm({
+      title: 'Hapus Staf dari Database',
+      message: `Yakin ingin menghapus "${name}" (${email}) dari database staf obeecreatives?`,
+      variant: 'danger',
+      confirmLabel: 'Ya, Hapus Staf',
+      cancelLabel: 'Batal',
+    });
+
+    if (ok) {
       const res = authService.deleteStaff(email);
       if (res.success) {
         setDirectory(authService.getDirectory());
       } else {
-        alert(res.error || 'Gagal menghapus staf.');
+        await dialog.alert({
+          title: 'Gagal Menghapus Staf',
+          message: res.error || 'Gagal menghapus staf.',
+          variant: 'danger',
+        });
       }
     }
   };
@@ -252,7 +278,11 @@ export const StaffDatabaseView: React.FC<StaffDatabaseViewProps> = ({
 
   const handlePushToCloud = async () => {
     if (!staffGasService.isConfigured()) {
-      alert('Konfigurasikan URL Web App GAS Staf terlebih dahulu di tab "Konfigurasi GAS Staf"');
+      await dialog.alert({
+        title: 'Konfigurasi Belum Diisi',
+        message: 'Konfigurasikan URL Web App GAS Staf terlebih dahulu di tab "Konfigurasi GAS Staf".',
+        variant: 'warning',
+      });
       setSubTab('gas_setup');
       return;
     }
@@ -270,7 +300,11 @@ export const StaffDatabaseView: React.FC<StaffDatabaseViewProps> = ({
 
   const handlePullFromCloud = async () => {
     if (!staffGasService.isConfigured()) {
-      alert('Konfigurasikan URL Web App GAS Staf terlebih dahulu di tab "Konfigurasi GAS Staf"');
+      await dialog.alert({
+        title: 'Konfigurasi Belum Diisi',
+        message: 'Konfigurasikan URL Web App GAS Staf terlebih dahulu di tab "Konfigurasi GAS Staf".',
+        variant: 'warning',
+      });
       setSubTab('gas_setup');
       return;
     }

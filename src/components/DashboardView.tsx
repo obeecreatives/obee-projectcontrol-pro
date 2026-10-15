@@ -3,6 +3,7 @@ import { ContentItem, UserRole, WorkMode } from '../types';
 import { ROLES, normalizeClientName, normalizeCreatorName } from '../data/seedData';
 import { storageService } from '../services/storageService';
 import { geoService } from '../services/geoService';
+import { useConfirm } from '../context/DialogContext';
 import { KpiWidget } from './KpiWidget';
 import {
   BULAN_INDONESIA,
@@ -45,6 +46,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenWorkModeModal,
   isDarkMode = true,
 }) => {
+  const dialog = useConfirm();
   const roleConfig = ROLES[activeRole] || ROLES.project_manager;
 
   const today = new Date();
@@ -53,15 +55,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const [teamPresenceList, setTeamPresenceList] = useState(() => geoService.getTeamPresence());
 
-  const handleDeletePresence = (email: string, name: string) => {
-    if (window.confirm(`Hapus kartu presensi untuk "${name}" (${email})?`)) {
+  const handleDeletePresence = async (email: string, name: string) => {
+    const ok = await dialog.confirm({
+      title: 'Hapus Kartu Presensi Tim',
+      message: `Hapus kartu presensi untuk "${name}" (${email})?`,
+      variant: 'danger',
+      confirmLabel: 'Ya, Hapus Presensi',
+      cancelLabel: 'Batal',
+    });
+    if (ok) {
       geoService.removeTeamMember(email);
       setTeamPresenceList(geoService.getTeamPresence());
     }
   };
 
-  const handleResetPresence = () => {
-    if (window.confirm('Reset daftar presensi tim ke data awal studio?')) {
+  const handleResetPresence = async () => {
+    const ok = await dialog.confirm({
+      title: 'Reset Daftar Presensi',
+      message: 'Reset daftar presensi tim ke data default awal studio obeecreatives?',
+      variant: 'warning',
+      confirmLabel: 'Ya, Reset Presensi',
+      cancelLabel: 'Batal',
+    });
+    if (ok) {
       geoService.resetToDefaultPresence();
       setTeamPresenceList(geoService.getTeamPresence());
     }

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { StaffUser, UserRole, SecurityLogItem, DefaultPasswordConfig, ViewTab, RoleMenuPermissions, DEFAULT_ROLE_MENU_PERMISSIONS, RolePermissionKey, RolePermissionsMap, DEFAULT_ROLE_PERMISSIONS } from '../types';
 import { authService, DEVELOPER_STANDARD_DEFAULT_PASSWORDS } from '../services/authService';
 import { storageService } from '../services/storageService';
+import { useConfirm } from '../context/DialogContext';
 import { ROLES, FULL_ACCESS_EMAILS } from '../data/seedData';
 import {
   ShieldCheck,
@@ -57,6 +58,7 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
   isDarkMode = true,
   onRefreshDirectory,
 }) => {
+  const dialog = useConfirm();
   const [subTab, setSubTab] = useState<'roles' | 'menu_matrix' | 'whitelist' | 'passwords' | 'self_service' | 'logs'>('roles');
   const [directory, setDirectory] = useState<StaffUser[]>(() => authService.getDirectory());
   const [roleChangeFeedback, setRoleChangeFeedback] = useState<string | null>(null);
@@ -109,8 +111,15 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
     });
   };
 
-  const handleResetRbacPermissions = () => {
-    if (window.confirm('Kembalikan seluruh konfigurasi Matriks Hak Akses (RBAC) ke standar bawaan sistem? (Peran Staff/Freelancer akan tetap memiliki izin hapus card)')) {
+  const handleResetRbacPermissions = async () => {
+    const ok = await dialog.confirm({
+      title: 'Reset Matriks Hak Akses (RBAC)',
+      message: 'Kembalikan seluruh konfigurasi Matriks Hak Akses (RBAC) ke standar bawaan sistem? (Peran Staff/Freelancer akan tetap memiliki izin hapus card).',
+      variant: 'warning',
+      confirmLabel: 'Ya, Reset Matriks',
+      cancelLabel: 'Batal',
+    });
+    if (ok) {
       const reset = storageService.resetRolePermissions();
       setRolePermissions(reset);
       if (onRefreshDirectory) onRefreshDirectory();
@@ -130,14 +139,18 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
 
-  const handleRoleChange = (email: string, newRole: UserRole) => {
+  const handleRoleChange = async (email: string, newRole: UserRole) => {
     const res = authService.updateUserRole(email, newRole, currentUser?.email || 'Admin');
     if (res.success) {
       refreshAll();
       setRoleChangeFeedback(`Peran akun "${email}" berhasil diubah menjadi "${ROLES[newRole]?.title || newRole}".`);
       setTimeout(() => setRoleChangeFeedback(null), 3500);
     } else {
-      alert(res.error || 'Gagal mengubah peran.');
+      await dialog.alert({
+        title: 'Gagal Mengubah Peran',
+        message: res.error || 'Gagal mengubah peran akun.',
+        variant: 'danger',
+      });
     }
   };
 
@@ -280,8 +293,15 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
     if (onRefreshDirectory) onRefreshDirectory();
   };
 
-  const handleResetMenuPermissions = () => {
-    if (window.confirm('Kembalikan seluruh checklist hak akses menu ke pengaturan default bawaan sistem?')) {
+  const handleResetMenuPermissions = async () => {
+    const ok = await dialog.confirm({
+      title: 'Reset Checklist Hak Akses Menu',
+      message: 'Kembalikan seluruh checklist hak akses menu ke pengaturan default bawaan sistem?',
+      variant: 'warning',
+      confirmLabel: 'Ya, Reset Menu',
+      cancelLabel: 'Batal',
+    });
+    if (ok) {
       const reset = storageService.resetMenuPermissions();
       setMenuPermissions(reset);
       setMenuMatrixFeedback('Checklist menu berhasil dikembalikan ke standar rekomendasi bawaan.');
@@ -409,21 +429,33 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
   };
 
   // Handle Quick Reset to Default Password for a staff member
-  const handleResetToDefault = (user: StaffUser) => {
+  const handleResetToDefault = async (user: StaffUser) => {
     const isTargetAdmin = user.isAdmin || ['project_manager', 'web_developer', 'admin'].includes(user.role);
     const expectedDefault = isTargetAdmin ? defaultPasswords.adminDefault : defaultPasswords.staffDefault;
 
-    if (
-      window.confirm(
-        `Reset password akun "${user.email}" ke Password Default Awal (${expectedDefault})?`
-      )
-    ) {
+    const ok = await dialog.confirm({
+      title: 'Reset Password Akun ke Default',
+      message: `Reset password akun "${user.name}" (${user.email}) ke Password Default Awal (${expectedDefault})?`,
+      variant: 'warning',
+      confirmLabel: 'Ya, Reset Password',
+      cancelLabel: 'Batal',
+    });
+
+    if (ok) {
       const res = authService.adminResetPin(currentUser?.email || 'admin', user.email);
       if (res.success) {
         refreshAll();
-        alert(`Password akun ${user.email} berhasil di-reset ke standar: "${res.newPassword}"`);
+        await dialog.alert({
+          title: 'Password Berhasil Direset',
+          message: `Password akun ${user.email} berhasil di-reset ke standar: "${res.newPassword}"`,
+          variant: 'success',
+        });
       } else {
-        alert(res.error || 'Gagal mereset password.');
+        await dialog.alert({
+          title: 'Gagal Mereset Password',
+          message: res.error || 'Gagal mereset password akun.',
+          variant: 'danger',
+        });
       }
     }
   };
@@ -456,18 +488,34 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
   };
 
   // Handle Delete from Whitelist
-  const handleDeleteFromWhitelist = (user: StaffUser) => {
+  const handleDeleteFromWhitelist = async (user: StaffUser) => {
     if (FULL_ACCESS_EMAILS.includes(user.email.toLowerCase())) {
-      alert(`Akun "${user.email}" adalah akun Super Admin / Developer terproteksi dan tidak boleh dihapus.`);
+      await dialog.alert({
+        title: 'Akun Terproteksi Sistem',
+        message: `Akun "${user.email}" adalah akun Super Admin / Developer terproteksi dan tidak boleh dihapus demi keamanan operasional.`,
+        variant: 'warning',
+      });
       return;
     }
 
-    if (window.confirm(`Hapus akun "${user.name}" (${user.email}) dari Whitelist sistem? Akun ini tidak akan dapat login lagi.`)) {
+    const ok = await dialog.confirm({
+      title: 'Hapus Akun dari Whitelist',
+      message: `Hapus akun "${user.name}" (${user.email}) dari Whitelist sistem?\n\nAkun ini tidak akan dapat login lagi ke Workspace OS obeecreatives.`,
+      variant: 'danger',
+      confirmLabel: 'Ya, Hapus Akun',
+      cancelLabel: 'Batal',
+    });
+
+    if (ok) {
       const res = authService.removeWhitelistUser(user.email, currentUser?.email || 'Admin');
       if (res.success) {
         refreshAll();
       } else {
-        alert(res.error || 'Gagal menghapus user dari whitelist.');
+        await dialog.alert({
+          title: 'Gagal Menghapus Akun',
+          message: res.error || 'Gagal menghapus user dari whitelist.',
+          variant: 'danger',
+        });
       }
     }
   };
@@ -527,8 +575,16 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
   };
 
   // Reset to Developer Standard Default Passwords
-  const handleResetToDeveloperStandards = () => {
-    if (window.confirm('Kembalikan konfigurasi password default ke standar resmi developer (Admin: 8888, Staf: 1234)?')) {
+  const handleResetToDeveloperStandards = async () => {
+    const ok = await dialog.confirm({
+      title: 'Reset Password Default ke Standar',
+      message: 'Kembalikan konfigurasi password default ke standar resmi developer (Admin: 8888, Staf: 1234)?',
+      variant: 'warning',
+      confirmLabel: 'Ya, Kembalikan ke Standar',
+      cancelLabel: 'Batal',
+    });
+
+    if (ok) {
       const std = authService.resetToDeveloperStandardPasswords(currentUser?.email || 'Developer');
       setEditAdminDefault(std.adminDefault);
       setEditStaffDefault(std.staffDefault);
@@ -1659,7 +1715,11 @@ export const AccessSettingsView: React.FC<AccessSettingsViewProps> = ({
                             <button
                               onClick={() => {
                                 navigator.clipboard.writeText(currentPin);
-                                alert(`Password untuk ${user.email} disalin: "${currentPin}"`);
+                                dialog.alert({
+                                  title: 'Password Berhasil Disalin',
+                                  message: `Password akun untuk "${user.email}" berhasil disalin ke clipboard:\n\n${currentPin}`,
+                                  variant: 'info',
+                                });
                               }}
                               className="text-slate-400 hover:text-red-500 p-1 cursor-pointer transition-colors"
                               title="Salin Password"

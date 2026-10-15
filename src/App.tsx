@@ -5,6 +5,7 @@ import { authService } from './services/authService';
 import { liveSyncService } from './services/liveSyncService';
 import { kanbanSyncService, KanbanSyncState } from './services/kanbanSyncService';
 import { geoService } from './services/geoService';
+import { useConfirm } from './context/DialogContext';
 import { LoginScreen } from './components/LoginScreen';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
@@ -58,6 +59,7 @@ interface Toast {
 }
 
 export default function App() {
+  const dialog = useConfirm();
   const [currentUser, setCurrentUser] = useState<StaffUser | null>(() => authService.getCurrentUser());
   const [currentTab, setCurrentTab] = useState<ViewTab>('board');
   const [items, setItems] = useState<ContentItem[]>(() => storageService.getContent());
@@ -297,8 +299,16 @@ export default function App() {
     }
   };
 
-  const handleDeleteContent = (id: string) => {
-    if (window.confirm('Yakin ingin menghapus konten ini? Tindakan ini tidak dapat dibatalkan.')) {
+  const handleDeleteContent = async (id: string) => {
+    const ok = await dialog.confirm({
+      title: 'Hapus Kartu Konten',
+      message: 'Yakin ingin menghapus konten ini? Tindakan ini tidak dapat dibatalkan dan akan tersinkron otomatis ke Spreadsheet.',
+      variant: 'danger',
+      confirmLabel: 'Ya, Hapus Konten',
+      cancelLabel: 'Batal',
+    });
+
+    if (ok) {
       const res = storageService.deleteContentItem(id);
       if (res.success) {
         setItems(storageService.getContent());
